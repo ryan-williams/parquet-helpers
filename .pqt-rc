@@ -11,6 +11,7 @@ defn p2jcc parquet-2-json.sh cat -c
 defn pqcc parquet-2-json.sh cat -c
 defn p2jcl parquet-2-json.sh cat -l
 defn pqcl parquet-2-json.sh cat -l
+defn pql parquet-2-json.sh cat -l
 defn p2jcl1 parquet-2-json.sh cat -l 1
 defn pqcl1 parquet-2-json.sh cat -l 1
 defn pq1 parquet-2-json.sh cat -l 1
