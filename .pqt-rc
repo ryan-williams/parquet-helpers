@@ -88,6 +88,7 @@ parquet2json_all() {
         cat > "$tmpfile"
         set -- "$tmpfile"
     fi
+    echo "MD5: $(md5sum "$@" | cut -d' ' -f1)"
     echo "$(stat -c %s "$@") bytes"
     echo "$(parquet-2-json.sh rowcount "$@") rows"
     parquet-2-json.sh schema "$@" && \
