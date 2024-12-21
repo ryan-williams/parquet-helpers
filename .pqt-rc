@@ -75,7 +75,7 @@ parquet2json_all() {
       shift
       if [ $# -eq 0 ]; then
         echo "Usage: ${FUNCNAME[0]} [-n <n_rows>] [-c] <path>" >&2
-        return 1
+        return 127
       fi
       n_rows="$1"; shift
     fi
@@ -87,12 +87,21 @@ parquet2json_all() {
         tmpfile="$(mktemp)"
         cat > "$tmpfile"
         set -- "$tmpfile"
+    elif [ $# -eq 1 ]; then
+      path="$1"; shift
+      if ! [ -e "$path" ]; then
+        echo "File not found: $path" >&2
+        return 127
+      fi
+    else
+      echo "Usage: ${FUNCNAME[0]} [-n <n_rows>] [-c] [path]" >&2
+      return 127
     fi
-    echo "MD5: $(md5sum "$@" | cut -d' ' -f1)"
-    echo "$(stat -c %s "$@") bytes"
-    echo "$(parquet-2-json.sh rowcount "$@") rows"
-    parquet-2-json.sh schema "$@" && \
-    parquet-2-json.sh cat -l "$n_rows" "$@" | "$pretty_cmd"
+    echo "MD5: $(md5sum "$path" | cut -d' ' -f1)"
+    echo "$(stat -c %s "$path") bytes"
+    echo "$(parquet-2-json.sh rowcount "$path") rows"
+    parquet-2-json.sh schema "$path" && \
+    parquet-2-json.sh cat -l "$n_rows" "$path" | "$pretty_cmd"
     rv=$?
     if [ -n "$tmpfile" ]; then
         rm "$tmpfile"
