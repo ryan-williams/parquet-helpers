@@ -71,7 +71,7 @@ defn p2jcnq parquet_pretty_print_n
 parquet2json_all() {
     local tmpfile=
     local n_rows=10
-    if [ "$1" == -n ]; then
+    if [ "$1" == "-n" ]; then
       shift
       if [ $# -eq 0 ]; then
         echo "Usage: ${FUNCNAME[0]} [-n <n_rows=10>] [-c] <path>" >&2
