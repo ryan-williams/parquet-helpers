@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 
 set -e
-# echo "parquet-diff.sh ($#):"
-# for arg in "$@"; do
-#   echo "  $arg"
-# done
-# echo
+if [ -n "$DIFF_PARQUET_VERBOSE" ]; then
+  echo "git-diff-parquet.sh ($#):"
+  for arg in "$@"; do
+    echo "  $arg"
+  done
+  echo
+  set -x
+fi
 
 n="$PQT_DIFF_N_ROWS"
 if [ -z "$n" ]; then
-  n="$(git config diff.parquet.n-rows)"
+  n="$(git config diff.parquet.n-rows || true)"
   if [ -z "$n" ]; then
     n=2
   fi
