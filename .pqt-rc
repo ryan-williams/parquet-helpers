@@ -74,7 +74,7 @@ parquet2json_all() {
     if [ "$1" == -n ]; then
       shift
       if [ $# -eq 0 ]; then
-        echo "Usage: ${FUNCNAME[0]} [-n <n_rows>] [-c] <path>" >&2
+        echo "Usage: ${FUNCNAME[0]} [-n <n_rows=10>] [-c] <path>" >&2
         return 127
       fi
       n_rows="$1"; shift
