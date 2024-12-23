@@ -1,5 +1,5 @@
 # parquet-helpers
-Bash/Git scripts/aliases for working with Parquet files.
+Bash scripts/aliases and `git {diff,show}` plugins for Parquet files.
 
 <!-- toc -->
 - [parquet2json helpers](#parquet2json)
@@ -28,7 +28,9 @@ cat foo.parquet | parquet2json - rowcount  # ❌
 #    5: tokio::runtime::runtime::Runtime::block_on
 #    6: parquet2json::main
 # note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.
-cat foo.parquet | parquet-2-json.sh rowcount  # ✅
+cat foo.parquet | parquet-2-json.sh rowcount  # ✅ works
+# 4
+cat foo.parquet | pqc  # 🎉 even easier
 # 4
 ```
 
