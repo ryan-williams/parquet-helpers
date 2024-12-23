@@ -9,6 +9,31 @@
 
 set -e
 
+err() {
+  echo "$*" >&2
+}
+
+usage() {
+  name="$(basename "$0")"
+  err "$name:"
+  err
+  err '  # Invoked by `git diff`:'
+  err "  $name <repo relpath> <old version tmpfile> <old hexsha> <old filemode> <new version tmpfile> <new hexsha> <new filemode>"
+  err
+  err '  # Invoked by e.g. `git diff --no-index --ext-diff`:'
+  err "  $name <old version tmpfile> <new version tmpfile>"
+  err
+  err 'Pass opts via the $DIFF_PQT_OPTS env var:'
+  err
+  err '- `-c`: `--color=always`'
+  err '- `-C`: `--color=never`'
+  err '- `-n`: number of rows to display (default: 2)'
+  err '- `-s`: compact output (a la `jq -c`, one row-object per line; default: one field per line)'
+  err '- `-v`: verbose/debug mode'
+  err
+  exit 1
+}
+
 verbose=
 n=
 compact=()
@@ -22,7 +47,7 @@ parse() {
       C) color=never ;;
       s) compact=(-c) ;;
       v) verbose=1 ;;
-      \?) echo "Invalid option: -$OPTARG" >&2; return 1 ;;
+      \?) usage ;;
     esac
   done
 }
@@ -76,7 +101,7 @@ if [ "$#" -eq 7 ]; then
   else
     hx1="$(git rev-parse --short "$hex1")"
   fi
-  echo "$path ($hx0..$hx1$mode_str)" >&2
+  err "$path ($hx0..$hx1$mode_str)"
 
   cmd0=("${cmd[@]}")
   cmd1=("${cmd[@]}")
@@ -93,9 +118,7 @@ elif [ $# -eq 9 ]; then
   cmd0=("${cmd[@]}")
   cmd1=("${cmd[@]}")
 else
-  echo "Usage: $0 <repo relpath> <old version tmpfile> <old hexsha> <old filemode> <new version tmpfile> <new hexsha> <new filemode>" >&2
-  echo "Usage: $0 <old version tmpfile> <new version tmpfile>" >&2
-  exit 1
+  usage
 fi
 
 if [ -z "$color" ]; then
