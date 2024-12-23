@@ -1,0 +1,31 @@
+name: Verify README examples
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: ['**']
+jobs:
+  verify-readme:
+    name: Verify README examples
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: 'Fetch `test` branch for README examples'
+      run: git fetch origin test:test
+    - uses: dtolnay/rust-toolchain@stable
+    - uses: Swatinem/rust-cache@v2
+    - run: cargo install parquet2json
+    - run: pip install 'bmdf>=0.3.0'
+    - name: Use git-diff-parquet.sh to diff .parquet files
+      run: |
+        echo "*.parquet diff=parquet" > .gitattributes
+        echo "${{ github.workspace }}" >> $GITHUB_PATH
+        git config diff.parquet.command git-diff-parquet.sh
+    - name: Verify README examples
+      run: |
+        mdcmd
+        git diff --exit-code
+    - name: Verify README TOC
+      run: |
+        mktoc
+        git diff --exit-code
