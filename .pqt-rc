@@ -68,63 +68,9 @@ parquet_pretty_print_n() {
 export -f parquet_pretty_print_n
 defn p2jcnq parquet_pretty_print_n
 
-parquet2json_all() {
-    local tmpfile=
-    local n_rows=10
-    local fn=${FUNCNAME[0]}
-    local args=("$@")
-    usage() {
-      echo "Usage: $fn [-n <n_rows=10>] [-c] <path>" >&2
-      echo "  -n: number of rows to display" >&2
-      echo "  -c: compact mode (one object per line)" >&2
-      echo >&2
-      echo "Received (${#args[@]}): ${args[*]}" >&2
-      return 127
-    }
-    if [ "$1" == "-n" ]; then
-      shift
-      if [ $# -eq 0 ]; then
-        echo "Missing argument for -n" >&2
-        usage
-        return 127
-      fi
-      n_rows="$1"; shift
-    fi
-    local pretty_cmd="jq"
-    if [ "$1" == -c ]; then
-      pretty_cmd="cat"
-      shift
-    fi
-    if [ $# -eq 0 ] || [ $# -eq 1 ] && [ "$1" == "-" ]; then
-      tmpfile="$(mktemp)"
-      cat > "$tmpfile"
-      set -- "$tmpfile"
-    elif [ $# -eq 1 ]; then
-      path="$1"; shift
-      if ! [ -e "$path" ]; then
-        echo "File not found: $path" >&2
-        return 127
-      fi
-    else
-      echo "Too many arguments: $#" >&2
-      usage
-      return 127
-    fi
-    echo "MD5: $(md5sum "$path" | cut -d' ' -f1)"
-    echo "$(stat -c %s "$path") bytes"
-    echo "$(parquet-2-json.sh rowcount "$path") rows"
-    parquet-2-json.sh schema "$path" && \
-    parquet-2-json.sh cat -l "$n_rows" "$path" | "$pretty_cmd"
-    rv=$?
-    if [ -n "$tmpfile" ]; then
-        rm "$tmpfile"
-    fi
-    return $rv
-}
-export -f parquet2json_all
-defn p2ja parquet2json_all
-defn pqa parquet2json_all
-defn pqa2 parquet2json_all -n 2
-defn pqa3 parquet2json_all -n 3
-defn pqa5 parquet2json_all -n 5
-defn pqac parquet2json_all -c
+defn p2ja parquet2json-all
+defn pqa parquet2json-all
+defn pqa2 parquet2json-all -n 2
+defn pqa3 parquet2json-all -n 3
+defn pqa5 parquet2json-all -n 5
+defn pqac parquet2json-all -c

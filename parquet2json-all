@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+args=("$@")
+usage() {
+  echo "Usage: $0 [-n <n_rows=10>] [-c] <path>" >&2
+  echo "  -n: number of rows to display" >&2
+  echo "  -c: compact mode (one object per line)" >&2
+  echo >&2
+  echo "Received (${#args[@]}): ${args[*]}" >&2
+  exit 127
+}
+
+n_rows=10
+pretty_cmd="jq"
+while getopts "n:ch" opt; do
+  case $opt in
+    n) n_rows="$OPTARG" ;;
+    c) pretty_cmd="cat" ;;
+    h) usage ;;
+    *) usage ;;
+  esac
+done
+
+# Shift off the parsed options
+shift $((OPTIND-1))
+
+if [ $# -eq 0 ] || { [ $# -eq 1 ] && [ "$1" == "-" ]; }; then
+  path="$(mktemp)"
+  trap 'rm -f "$path"' EXIT
+  cat > "$path"
+elif [ $# -eq 1 ]; then
+  path="$1"
+  if ! [ -e "$path" ]; then
+    echo "File not found: $path" >&2
+    exit 127
+  fi
+else
+  echo "Too many arguments: $#" >&2
+  usage
+fi
+
+echo "MD5: $(md5sum "$path" | cut -d' ' -f1)"
+echo "$(stat -c %s "$path") bytes"
+echo "$(parquet-2-json.sh rowcount "$path") rows"
+parquet-2-json.sh schema "$path"
+parquet-2-json.sh cat -l "$n_rows" "$path" | "$pretty_cmd"

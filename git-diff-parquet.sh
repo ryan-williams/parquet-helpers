@@ -79,7 +79,7 @@ if [ -z "$n" ]; then
   fi
 fi
 
-cmd=(pqa -n "$n" "${compact[@]}")
+cmd=(parquet2json-all -n "$n" "${compact[@]}")
 
 if [ "$#" -eq 7 ]; then
   path="$1"  ; shift  # repo relpath

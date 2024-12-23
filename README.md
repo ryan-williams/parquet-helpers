@@ -35,7 +35,7 @@ Useful aliases (from [.pqt-rc]):
 - `pqs` (`parquet-2-json.sh schema`): schema
 - `pqc` (`parquet-2-json.sh cat`): print all rows (as [JSONL])
 - `pql` (`parquet-2-json.sh cat -l <n>`): print `n` rows
-- `pqa` ([`parquet2json_all`]): overview including:
+- `pqa` ([`parquet2json-all`]): overview including:
   - MD5 sum
   - File size
   - Row count
@@ -44,7 +44,7 @@ Useful aliases (from [.pqt-rc]):
     - `-c`: "compact" one row per line (by default, rows are piped through `jq`, which pretty-prints them, one field per line)
 
 ## [git-diff-parquet.sh] <a id="git-diff-parquet"></a>
-Wraps [`parquet2json_all`] for use as a Git diff driver:
+Wraps [`parquet2json-all`] for use as a Git diff driver:
 
 ### Setup <a id="setup"></a>
 ```bash
@@ -53,7 +53,7 @@ echo "export PATH=$PATH:$PWD" >> ~/.bashrc && . ~/.bashrc
 
 # Git configs
 git config --global diff.parquet.command git-diff-parquet.sh
-git config --global diff.parquet.textconv parquet2json_all
+git config --global diff.parquet.textconv parquet2json-all
 
 # Git attributes (map globs/extensions to commands above):
 git config --global core.attributesfile ~/.gitattributes
@@ -61,7 +61,7 @@ echo "*.parquet diff=parquet" >> ~/.gitattributes
 
 # Or, initialize just one repo:
 git config diff.parquet.command git-diff-parquet.sh
-git config diff.parquet.textconv parquet2json_all
+git config diff.parquet.textconv parquet2json-all
 echo "*.parquet diff=parquet" >> .gitattributes
 ```
 
@@ -186,7 +186,7 @@ git-diff-parquet.sh
 
 
 [parquet-2-json.sh]: ./parquet-2-json.sh
-[`parquet2json_all`]: .pqt-rc#L71
+[`parquet2json-all`]: parquet2json-all
 [.pqt-rc]: ./.pqt-rc
 [git-diff-parquet.sh]: ./git-diff-parquet.sh
 [parquet2json]: https://github.com/jupiter/parquet2json/
