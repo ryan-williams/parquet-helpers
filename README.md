@@ -174,6 +174,7 @@ git-diff-parquet.sh
 # - `-c`: `--color=always`
 # - `-C`: `--color=never`
 # - `-n`: number of rows to display (default: 2)
+# - `-o`: offset (e.g. `-o100` skips the first 100 rows, -o-5 begins 5 rows from the end)
 # - `-s`: compact output (a la `jq -c`, one row-object per line; default: one field per line)
 # - `-v`: verbose/debug mode
 #

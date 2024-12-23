@@ -3,28 +3,41 @@
 set -eo pipefail
 
 args=("$@")
+
+err() {
+  echo "$@" >&2
+}
 usage() {
-  echo "Usage: $0 [-n <n_rows=10>] [-c] <path>" >&2
-  echo "  -n: number of rows to display" >&2
-  echo "  -c: compact mode (one object per line)" >&2
-  echo >&2
-  echo "Received (${#args[@]}): ${args[*]}" >&2
+  err "Usage: $0 [-n <n_rows=10>] [-o <offset>] [-s] <path>"
+  err "  -n: number of rows to display"
+  err "  -o: offset (skip) rows; negative ⟹ last rows"
+  err "  -s: compact mode (one object per line)"
+  err
+  err "Received (${#args[@]}): ${args[*]}"
   exit 127
 }
 
 n_rows=10
-pretty_cmd="jq"
-while getopts "n:ch" opt; do
+print_cmd="jq"
+offset=()
+while getopts "hn:o:s" opt; do
   case $opt in
-    n) n_rows="$OPTARG" ;;
-    c) pretty_cmd="cat" ;;
     h) usage ;;
+    n) n_rows="$OPTARG" ;;
+    o) offset=(-o"$OPTARG") ;;
+    s) print_cmd="cat" ;;
     *) usage ;;
   esac
 done
 
 # Shift off the parsed options
 shift $((OPTIND-1))
+
+if [ "$n_rows" -eq 0 ]; then
+  rows=()
+else
+  rows=(-l "$n_rows")
+fi
 
 if [ $# -eq 0 ] || { [ $# -eq 1 ] && [ "$1" == "-" ]; }; then
   path="$(mktemp)"
@@ -45,4 +58,4 @@ echo "MD5: $(md5sum "$path" | cut -d' ' -f1)"
 echo "$(stat -c %s "$path") bytes"
 echo "$(parquet-2-json.sh rowcount "$path") rows"
 parquet-2-json.sh schema "$path"
-parquet-2-json.sh cat -l "$n_rows" "$path" | "$pretty_cmd"
+parquet-2-json.sh cat "${rows[@]}" "${offset[@]}" "$path" | "$print_cmd"

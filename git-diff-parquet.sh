@@ -28,6 +28,7 @@ usage() {
   err '- `-c`: `--color=always`'
   err '- `-C`: `--color=never`'
   err '- `-n`: number of rows to display (default: 2)'
+  err '- `-o`: offset (e.g. `-o100` skips the first 100 rows, -o-5 begins 5 rows from the end)'
   err '- `-s`: compact output (a la `jq -c`, one row-object per line; default: one field per line)'
   err '- `-v`: verbose/debug mode'
   err
@@ -38,18 +39,19 @@ usage() {
   exit 1
 }
 
-verbose=
-n=
-compact=()
 color=
-
+n=
+offset=()
+compact=()
+verbose=
 parse() {
-  while getopts "n:cCsv" opt; do
+  while getopts "cCn:o:sv" opt; do
     case "$opt" in
-      n) n="$OPTARG" ;;
       c) color=always ;;
       C) color=never ;;
-      s) compact=(-c) ;;
+      n) n="$OPTARG" ;;
+      o) offset=("-o" "$OPTARG") ;;
+      s) compact=(-s) ;;
       v) verbose=1 ;;
       \?) usage ;;
     esac
@@ -79,7 +81,7 @@ if [ -z "$n" ]; then
   fi
 fi
 
-cmd=(parquet2json-all -n "$n" "${compact[@]}")
+cmd=(parquet2json-all -n "$n" "${offset[@]}" "${compact[@]}")
 
 if [ "$#" -eq 7 ]; then
   path="$1"  ; shift  # repo relpath
