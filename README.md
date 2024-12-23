@@ -3,8 +3,8 @@ Bash scripts/aliases and `git {diff,show}` plugins for Parquet files.
 
 <!-- toc -->
 - [parquet2json helpers](#parquet2json)
-- [git-diff-parquet.sh](#git-diff-parquet)
-    - [Setup](#setup)
+- [`git {diff,show}` plugins](#git)
+    - [Setup](#diff-setup)
     - [Examples](#examples)
         - [Field dtype changed](#dtype-changed)
         - [Field values changed](#values-changed)
@@ -47,17 +47,17 @@ Useful aliases (from [.pqt-rc]):
     - Configurable via `-n <n>`
     - `-c`: "compact" one row per line (by default, rows are piped through `jq`, which pretty-prints them, one field per line)
 
-## [git-diff-parquet.sh] <a id="git-diff-parquet"></a>
-Wraps [`parquet2json-all`] for use as a Git diff driver:
+## `git {diff,show}` plugins <a id="git"></a>
+[git-diff-parquet.sh] wraps [`parquet2json-all`] for use as a Git diff driver:
 
-### Setup <a id="setup"></a>
+### Setup <a id="diff-setup"></a>
 ```bash
 # From a clone of this repo: ensure git-diff-parquet.sh is on your $PATH
 echo "export PATH=$PATH:$PWD" >> ~/.bashrc && . ~/.bashrc
 
 # Git configs
-git config --global diff.parquet.command git-diff-parquet.sh
-git config --global diff.parquet.textconv parquet2json-all
+git config --global diff.parquet.command git-diff-parquet.sh  # for git diff
+git config --global diff.parquet.textconv parquet2json-all    # for git show
 
 # Git attributes (map globs/extensions to commands above):
 git config --global core.attributesfile ~/.gitattributes
@@ -95,6 +95,44 @@ test.parquet (3a84f68..27fb7a10)
 
 We see diffs in the MD5, file size, and schema. Better than nothing!
 
+Similarly, with `git show`:
+<!-- `bmdfff -stdiff git show 63dcdba` -->
+<details><summary><code>git show 63dcdba</code></summary>
+
+```diff
+commit 63dcdbabf9c97833a11571f2bab65a487835a67d
+Author: Ryan Williams <ryan@runsascoded.com>
+Date:   Sun Dec 22 20:30:03 2024 -0500
+
+    `test.parquet`: "make Gender" an int8
+    
+    ran `test.py`
+
+diff --git test.parquet test.parquet
+index 3a84f68..27fb7a1 100644
+--- test.parquet
++++ test.parquet
+@@ -1,5 +1,5 @@
+-MD5: 7957c8cc859f03517dcdac05dcdfee8a
+-13274 bytes
++MD5: 7c079c1420c5edffc54955a54ca38795
++13245 bytes
+ 20 rows
+ message schema {
+   OPTIONAL BYTE_ARRAY Ride ID (STRING);
+@@ -14,7 +14,7 @@ message schema {
+   OPTIONAL DOUBLE Start Station Longitude;
+   OPTIONAL DOUBLE End Station Latitude;
+   OPTIONAL DOUBLE End Station Longitude;
+-  OPTIONAL INT64 Gender;
++  OPTIONAL INT32 Gender (INTEGER(8,true));
+   OPTIONAL BYTE_ARRAY User Type (STRING);
+   OPTIONAL BYTE_ARRAY Start Region (STRING);
+   OPTIONAL BYTE_ARRAY End Region (STRING);
+```
+</details>
+
+
 #### Field values changed <a id="values-changed"></a>
 [`34d2b1d`] changed the "Gender" field to a categorical string type:
 
@@ -126,11 +164,76 @@ test.parquet (27fb7a1..5ca97430)
 ```
 Here we see diffs to the first two rows of data (in addition to the MD5, size, and schema).
 
+Similarly, with `git show`:
+<!-- `bmdfff -stdiff -- git show 34d2b1d` -->
+<details><summary><code>git show 34d2b1d</code></summary>
+
+```diff
+commit 34d2b1ddc93f3a3cd04270268338c41309e41fa3
+Author: Ryan Williams <ryan@runsascoded.com>
+Date:   Sun Dec 22 14:08:07 2024 -0500
+
+    `test.parquet`: make "Gender" a categorical
+
+diff --git test.parquet test.parquet
+index 27fb7a1..5ca9743 100644
+--- test.parquet
++++ test.parquet
+@@ -1,5 +1,5 @@
+-MD5: 7c079c1420c5edffc54955a54ca38795
+-13245 bytes
++MD5: 0bf2c7f825a70660319e578201a04543
++13343 bytes
+ 20 rows
+ message schema {
+   OPTIONAL BYTE_ARRAY Ride ID (STRING);
+@@ -14,7 +14,7 @@ message schema {
+   OPTIONAL DOUBLE Start Station Longitude;
+   OPTIONAL DOUBLE End Station Latitude;
+   OPTIONAL DOUBLE End Station Longitude;
+-  OPTIONAL INT32 Gender (INTEGER(8,true));
++  OPTIONAL BYTE_ARRAY Gender (STRING);
+   OPTIONAL BYTE_ARRAY User Type (STRING);
+   OPTIONAL BYTE_ARRAY Start Region (STRING);
+   OPTIONAL BYTE_ARRAY End Region (STRING);
+@@ -32,7 +32,7 @@ message schema {
+   "Start Station Longitude": -73.926241,
+   "End Station Latitude": 40.68458,
+   "End Station Longitude": -73.90925,
+-  "Gender": 0,
++  "Gender": "U",
+   "User Type": "Customer",
+   "Start Region": "NYC",
+   "End Region": "NYC"
+@@ -50,7 +50,7 @@ message schema {
+   "Start Station Longitude": -73.99410143494606,
+   "End Station Latitude": 40.77149671054441,
+   "End Station Longitude": -73.99046033620834,
+-  "Gender": 0,
++  "Gender": "U",
+   "User Type": "Customer",
+   "Start Region": "NYC",
+   "End Region": "NYC"
+diff --git test.py test.py
+index b18c424..7f0177a 100644
+--- test.py
++++ test.py
+@@ -3,5 +3,6 @@
+ import pandas as pd
+ 
+ df = pd.read_parquet("test.parquet")
+-df = df.astype({'Gender': 'Int8'})
++gender_map = { 0: "U", 1: "M", 2: "F" }
++df["Gender"] = df["Gender"].map(gender_map).astype("category")
+ df.to_parquet('test.parquet')
+```
+</details>
+
 #### File added <a id="file-added"></a>
 [`c232deb`] came before the 2 above, and added [`test.parquet`]:
-<!-- `bmdff -stdiff -EDIFF_PQT_OPTS=-s git diff 5a5b84e..c232deb` -->
+<!-- `bmdff -stdiff -EDIFF_PQT_OPTS=-s git diff c232deb^..c232deb` -->
 ```bash
-DIFF_PQT_OPTS=-s git diff 5a5b84e..c232deb
+DIFF_PQT_OPTS=-s git diff 'c232deb^..c232deb'
 ```
 ```diff
 test.parquet (000000..3a84f68, ..100644)
@@ -160,6 +263,83 @@ test.parquet (000000..3a84f68, ..100644)
 > {"Ride ID":"ADE40852FD10329E","Rideable Type":"classic_bike","Start Time":"2024-10-31T05:18:29.219","Stop Time":"2024-11-01T01:03:53.219","Start Station Name":"9 Ave & W 39 St","Start Station ID":"6644.08","End Station Name":"11 Ave & W 59 St","End Station ID":"7059.01","Start Station Latitude":40.756403523272496,"Start Station Longitude":-73.99410143494606,"End Station Latitude":40.77149671054441,"End Station Longitude":-73.99046033620834,"Gender":0,"User Type":"Customer","Start Region":"NYC","End Region":"NYC"}
 
 ```
+
+Similarly, with `git show`:
+<!-- `bmdfff -stdiff -EDIFF_PQT_OPTS=-s git show c232deb` -->
+<details><summary><code>DIFF_PQT_OPTS=-s git show c232deb</code></summary>
+
+```diff
+commit c232deb412dae45046da37f9680a08122073a641
+Author: Ryan Williams <ryan@runsascoded.com>
+Date:   Sun Dec 22 13:51:08 2024 -0500
+
+    initial `test.parquet`
+
+diff --git test.parquet test.parquet
+new file mode 100644
+index 0000000..3a84f68
+--- /dev/null
++++ test.parquet
+@@ -0,0 +1,57 @@
++MD5: 7957c8cc859f03517dcdac05dcdfee8a
++13274 bytes
++20 rows
++message schema {
++  OPTIONAL BYTE_ARRAY Ride ID (STRING);
++  OPTIONAL BYTE_ARRAY Rideable Type (STRING);
++  OPTIONAL INT64 Start Time (TIMESTAMP(MICROS,false));
++  OPTIONAL INT64 Stop Time (TIMESTAMP(MICROS,false));
++  OPTIONAL BYTE_ARRAY Start Station Name (STRING);
++  OPTIONAL BYTE_ARRAY Start Station ID (STRING);
++  OPTIONAL BYTE_ARRAY End Station Name (STRING);
++  OPTIONAL BYTE_ARRAY End Station ID (STRING);
++  OPTIONAL DOUBLE Start Station Latitude;
++  OPTIONAL DOUBLE Start Station Longitude;
++  OPTIONAL DOUBLE End Station Latitude;
++  OPTIONAL DOUBLE End Station Longitude;
++  OPTIONAL INT64 Gender;
++  OPTIONAL BYTE_ARRAY User Type (STRING);
++  OPTIONAL BYTE_ARRAY Start Region (STRING);
++  OPTIONAL BYTE_ARRAY End Region (STRING);
++}
++{
++  "Ride ID": "47D7696609CD77E4",
++  "Rideable Type": "classic_bike",
++  "Start Time": "2024-10-31T03:53:24.765",
++  "Stop Time": "2024-11-01T00:10:45.107",
++  "Start Station Name": "Cedar St & Myrtle Ave",
++  "Start Station ID": "4751.01",
++  "End Station Name": "Moffat St & Bushwick",
++  "End Station ID": "4357.01",
++  "Start Station Latitude": 40.697842,
++  "Start Station Longitude": -73.926241,
++  "End Station Latitude": 40.68458,
++  "End Station Longitude": -73.90925,
++  "Gender": 0,
++  "User Type": "Customer",
++  "Start Region": "NYC",
++  "End Region": "NYC"
++}
++{
++  "Ride ID": "ADE40852FD10329E",
++  "Rideable Type": "classic_bike",
++  "Start Time": "2024-10-31T05:18:29.219",
++  "Stop Time": "2024-11-01T01:03:53.219",
++  "Start Station Name": "9 Ave & W 39 St",
++  "Start Station ID": "6644.08",
++  "End Station Name": "11 Ave & W 59 St",
++  "End Station ID": "7059.01",
++  "Start Station Latitude": 40.756403523272496,
++  "Start Station Longitude": -73.99410143494606,
++  "End Station Latitude": 40.77149671054441,
++  "End Station Longitude": -73.99046033620834,
++  "Gender": 0,
++  "User Type": "Customer",
++  "Start Region": "NYC",
++  "End Region": "NYC"
++}
+```
+</details>
 
 #### Customizing output with `$DIFF_PQT_OPTS` <a id="customizing"></a>
 `$DIFF_PQT_OPTS` can customize output formatting:
@@ -215,8 +395,37 @@ test.parquet (5ca9743..c621f0e0)
 
 ```
 
-
 `-o<offset>` can also be negative, printing the last `<offset>` rows of the file (though in this case it would make for a noisier diff, since the "before" side's last rows are expected to be different from the "after" side's).
+
+And with `git show`:
+<!-- `bmdfff -stdiff -EDIFF_PQT_OPTS="-sn0 -o20" git show 69e8ea3` -->
+<details><summary><code>DIFF_PQT_OPTS=-sn0 -o20 git show 69e8ea3</code></summary>
+
+```diff
+commit 69e8ea39952a90a0313506dba649d789837936f2
+Author: Ryan Williams <ryan@runsascoded.com>
+Date:   Mon Dec 23 11:13:48 2024 -0500
+
+    append 5 rows
+
+diff --git test.parquet test.parquet
+index 5ca9743..c621f0e 100644
+--- test.parquet
++++ test.parquet
+@@ -1,6 +1,6 @@
+-MD5: 0bf2c7f825a70660319e578201a04543
+-13343 bytes
+-20 rows
++MD5: 762aeca641059e0773382adab8d23fa5
++13786 bytes
++25 rows
+ message schema {
+   OPTIONAL BYTE_ARRAY Ride ID (STRING);
+   OPTIONAL BYTE_ARRAY Rideable Type (STRING);
+```
+</details>
+
+
 
 [parquet-2-json.sh]: ./parquet-2-json.sh
 [`parquet2json-all`]: parquet2json-all
