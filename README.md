@@ -9,6 +9,8 @@ Bash/Git scripts/aliases for working with Parquet files.
         - [Field dtype changed](#dtype-changed)
         - [Field values changed](#values-changed)
         - [File added](#file-added)
+        - [Customizing output with `$DIFF_PQT_OPTS`](#customizing)
+        - [Appending rows](#appending-rows)
 <!-- /toc -->
 
 ## [parquet2json] helpers <a id="parquet2json"></a>
@@ -157,7 +159,8 @@ test.parquet (000000..3a84f68, ..100644)
 
 ```
 
-Note how `$DIFF_PQT_OPTS` can customize output formatting:
+#### Customizing output with `$DIFF_PQT_OPTS` <a id="customizing"></a>
+`$DIFF_PQT_OPTS` can customize output formatting:
 <!-- `bmdf git-diff-parquet.sh` -->
 ```bash
 git-diff-parquet.sh
@@ -184,7 +187,34 @@ git-diff-parquet.sh
 #   PQT="-sn3" git diff           # Shorter var name can then be used to configure diffs (in this case: compact output, 3 rows)
 ```
 
+#### Appending rows <a id="appending-rows"></a>
+[`69e8ea3`] appends 5 rows to [`test.parquet`]; `-n0` (compare all rows) and `-o20` (skip first 20 rows) is a nice way to view this case:
 
+<!-- `bmdff -stdiff -EDIFF_PQT_OPTS="-sn0 -o20" git diff 69e8ea3^..69e8ea3` -->
+```bash
+DIFF_PQT_OPTS=-sn0 -o20 git diff '69e8ea3^..69e8ea3'
+```
+```diff
+test.parquet (5ca9743..c621f0e0)
+1,3c1,3
+< MD5: 0bf2c7f825a70660319e578201a04543
+< 13343 bytes
+< 20 rows
+---
+> MD5: 762aeca641059e0773382adab8d23fa5
+> 13786 bytes
+> 25 rows
+21a22,26
+> {"Ride ID":"A708CB5F5B9B0A0A","Rideable Type":"classic_bike","Start Time":"2024-10-31T18:24:32.978","Stop Time":"2024-11-01T01:00:53.858","Start Station Name":"4 Ave & E 12 St","Start Station ID":"5788.15","End Station Name":"8 Ave & W 31 St","End Station ID":"6450.05","Start Station Latitude":40.732647,"Start Station Longitude":-73.99011,"End Station Latitude":40.7505853470215,"End Station Longitude":-73.9946848154068,"Gender":"U","User Type":"Customer","Start Region":"NYC","End Region":"NYC"}
+> {"Ride ID":"AF7B0AA23EA2BEEA","Rideable Type":"electric_bike","Start Time":"2024-10-31T18:30:18.577","Stop Time":"2024-11-01T00:19:32.156","Start Station Name":"Columbus Ave & W 95 St","Start Station ID":"7520.07","End Station Name":"Freeman St & Reverend James A Polite Ave","End Station ID":"8080.01","Start Station Latitude":40.7919557,"Start Station Longitude":-73.968087,"End Station Latitude":40.830529,"End Station Longitude":-73.894717,"Gender":"U","User Type":"Customer","Start Region":"NYC","End Region":"NYC"}
+> {"Ride ID":"7D719878E8164589","Rideable Type":"electric_bike","Start Time":"2024-10-31T18:30:29.155","Stop Time":"2024-11-01T00:19:43.550","Start Station Name":"Columbus Ave & W 95 St","Start Station ID":"7520.07","End Station Name":"Freeman St & Reverend James A Polite Ave","End Station ID":"8080.01","Start Station Latitude":40.7919557,"Start Station Longitude":-73.968087,"End Station Latitude":40.830529,"End Station Longitude":-73.894717,"Gender":"U","User Type":"Customer","Start Region":"NYC","End Region":"NYC"}
+> {"Ride ID":"BE959FD40D19CB5B","Rideable Type":"classic_bike","Start Time":"2024-10-31T18:41:57.297","Stop Time":"2024-11-01T03:28:43.499","Start Station Name":"W 34 St & 11 Ave","Start Station ID":"6578.01","End Station Name":"Broadway & E 21 St","End Station ID":"6098.1","Start Station Latitude":40.75594159,"Start Station Longitude":-74.0021163,"End Station Latitude":40.739888408589955,"End Station Longitude":-73.98958593606949,"Gender":"U","User Type":"Customer","Start Region":"NYC","End Region":"NYC"}
+> {"Ride ID":"A1EB017D7CB1A09F","Rideable Type":"classic_bike","Start Time":"2024-10-31T18:46:42.479","Stop Time":"2024-11-01T17:28:56.677","Start Station Name":"W 34 St & 11 Ave","Start Station ID":"6578.01","End Station Name":"E 13 St & Ave A","End Station ID":"5779.09","Start Station Latitude":40.75594159,"Start Station Longitude":-74.0021163,"End Station Latitude":40.72966729392978,"End Station Longitude":-73.98067966103554,"Gender":"U","User Type":"Subscriber","Start Region":"NYC","End Region":"NYC"}
+
+```
+
+
+`-o<offset>` can also be negative, printing the last `<offset>` rows of the file (though in this case it would make for a noisier diff, since the "before" side's last rows are expected to be different from the "after" side's).
 
 [parquet-2-json.sh]: ./parquet-2-json.sh
 [`parquet2json-all`]: parquet2json-all
@@ -195,6 +225,7 @@ git-diff-parquet.sh
 [`63dcdba`]: https://github.com/ryan-williams/parquet-helpers/commit/63dcdba
 [`c232deb`]: https://github.com/ryan-williams/parquet-helpers/commit/c232deb
 [`34d2b1d`]: https://github.com/ryan-williams/parquet-helpers/commit/34d2b1d
+[`69e8ea3`]: https://github.com/ryan-williams/parquet-helpers/commit/69e8ea3
 [@test]: https://github.com/ryan-williams/parquet-helpers/tree/test
 [`test.py`]: https://github.com/ryan-williams/parquet-helpers/tree/test/test.py
 [`test.parquet`]: https://github.com/ryan-williams/parquet-helpers/tree/test/test.parquet
