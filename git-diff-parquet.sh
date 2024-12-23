@@ -31,6 +31,10 @@ usage() {
   err '- `-s`: compact output (a la `jq -c`, one row-object per line; default: one field per line)'
   err '- `-v`: verbose/debug mode'
   err
+  err 'The "opts var" itself (default "DIFF_PQT_OPTS") can also be customized, by setting `$DIFF_PQT_OPTS_VAR`, e.g.:'
+  err
+  err '  export DIFF_PQT_OPTS_VAR=PQT  # This can be done once, e.g. in your .bashrc'
+  err '  PQT="-sn3" git diff           # Shorter var name can then be used to configure diffs (in this case: compact output, 3 rows)'
   exit 1
 }
 
@@ -52,8 +56,10 @@ parse() {
   done
 }
 
-if [ -n "$DIFF_PQT_OPTS" ]; then
-  IFS=' ' read -ra opts <<< "$DIFF_PQT_OPTS"
+OPTS_VAR="${DIFF_PQT_OPTS_VAR:-DIFF_PQT_OPTS}"
+OPTS="${!OPTS_VAR}"
+if [ -n "$OPTS" ]; then
+  IFS=' ' read -ra opts <<< "$OPTS"
   parse "${opts[@]}"
 fi
 
