@@ -71,10 +71,21 @@ defn p2jcnq parquet_pretty_print_n
 parquet2json_all() {
     local tmpfile=
     local n_rows=10
+    local fn=${FUNCNAME[0]}
+    local args=("$@")
+    usage() {
+      echo "Usage: $fn [-n <n_rows=10>] [-c] <path>" >&2
+      echo "  -n: number of rows to display" >&2
+      echo "  -c: compact mode (one object per line)" >&2
+      echo >&2
+      echo "Received (${#args[@]}): ${args[*]}" >&2
+      return 127
+    }
     if [ "$1" == "-n" ]; then
       shift
       if [ $# -eq 0 ]; then
-        echo "Usage: ${FUNCNAME[0]} [-n <n_rows=10>] [-c] <path>" >&2
+        echo "Missing argument for -n" >&2
+        usage
         return 127
       fi
       n_rows="$1"; shift
@@ -82,11 +93,12 @@ parquet2json_all() {
     local pretty_cmd="jq"
     if [ "$1" == -c ]; then
       pretty_cmd="cat"
+      shift
     fi
     if [ $# -eq 0 ] || [ $# -eq 1 ] && [ "$1" == "-" ]; then
-        tmpfile="$(mktemp)"
-        cat > "$tmpfile"
-        set -- "$tmpfile"
+      tmpfile="$(mktemp)"
+      cat > "$tmpfile"
+      set -- "$tmpfile"
     elif [ $# -eq 1 ]; then
       path="$1"; shift
       if ! [ -e "$path" ]; then
@@ -94,7 +106,8 @@ parquet2json_all() {
         return 127
       fi
     else
-      echo "Usage: ${FUNCNAME[0]} [-n <n_rows>] [-c] [path]" >&2
+      echo "Too many arguments: $#" >&2
+      usage
       return 127
     fi
     echo "MD5: $(md5sum "$path" | cut -d' ' -f1)"
