@@ -1,7 +1,38 @@
 #!/usr/bin/env bash
+#
+# Pass opts via the $DIFF_PQT_OPTS env var:
+# - `-c`: `--color=always`
+# - `-C`: `--color=never`
+# - `-n`: number of rows to display (default: 2)
+# - `-s`: compact output (a la `jq -c`, one row-object per line; default: one field per line)
+# - `-v`: verbose/debug mode
 
 set -e
-if [ -n "$DIFF_PARQUET_VERBOSE" ]; then
+
+verbose=
+n=
+compact=()
+color=
+
+parse() {
+  while getopts "n:cCsv" opt; do
+    case "$opt" in
+      n) n="$OPTARG" ;;
+      c) color=always ;;
+      C) color=never ;;
+      s) compact=(-c) ;;
+      v) verbose=1 ;;
+      \?) echo "Invalid option: -$OPTARG" >&2; return 1 ;;
+    esac
+  done
+}
+
+if [ -n "$DIFF_PQT_OPTS" ]; then
+  IFS=' ' read -ra opts <<< "$DIFF_PQT_OPTS"
+  parse "${opts[@]}"
+fi
+
+if [ -n "$verbose" ]; then
   echo "git-diff-parquet.sh ($#):"
   for arg in "$@"; do
     echo "  $arg"
@@ -10,14 +41,14 @@ if [ -n "$DIFF_PARQUET_VERBOSE" ]; then
   set -x
 fi
 
-n="$PQT_DIFF_N_ROWS"
 if [ -z "$n" ]; then
   n="$(git config diff.parquet.n-rows || true)"
   if [ -z "$n" ]; then
     n=2
   fi
 fi
-cmd="pqa -n $n"
+
+cmd=(pqa -n "$n" "${compact[@]}")
 
 if [ "$#" -eq 7 ]; then
   path="$1"  ; shift  # repo relpath
@@ -47,28 +78,36 @@ if [ "$#" -eq 7 ]; then
   fi
   echo "$path ($hx0..$hx1$mode_str)" >&2
 
-  cmd0="$cmd"
-  cmd1="$cmd"
+  cmd0=("${cmd[@]}")
+  cmd1=("${cmd[@]}")
   if [ "$hex0" == . ]; then
-    cmd0="cat"
+    cmd0=(cat)
   fi
   if [ "$hex1" == . ]; then
-    cmd1="cat"
+    cmd1=(cat)
   fi
 elif [ $# -eq 9 ]; then
   # Called via e.g. `git diff --no-index --ext-diff "$tmppath0" "$tmppath1"` in `git-diff-dvc.sh`
   pqt0="$1"
   pqt1="$8"
-  cmd0="$cmd"
-  cmd1="$cmd"
+  cmd0=("${cmd[@]}")
+  cmd1=("${cmd[@]}")
 else
   echo "Usage: $0 <repo relpath> <old version tmpfile> <old hexsha> <old filemode> <new version tmpfile> <new hexsha> <new filemode>" >&2
   echo "Usage: $0 <old version tmpfile> <new version tmpfile>" >&2
   exit 1
 fi
 
+if [ -z "$color" ]; then
+  if [ -t 0 ]; then
+    color=always
+  else
+    color=never
+  fi
+fi
 set +e
-diff --color=always <($cmd0 "$pqt0") <($cmd1 "$pqt1")
+diff --color=$color <("${cmd0[@]}" "$pqt0") <("${cmd1[@]}" "$pqt1")
+set -e
 rv=$?
 echo
 if [ $rv -eq 0 ] || [ $rv -eq 1 ]; then
