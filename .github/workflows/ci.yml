@@ -23,6 +23,7 @@ jobs:
         git config diff.parquet.command git-diff-parquet.sh
     - name: Verify README examples
       run: |
+        . .pqt-rc
         mdcmd
         git diff --exit-code
     - name: Verify README TOC

@@ -1,5 +1,18 @@
 #!/usr/bin/env bash
 
+defn() {
+  # Like defining an alias, but it's an exported bash function (usable in subshells).
+  name="$1"
+  shift
+  if [ $# -eq 0 ]; then
+    echo "Usage: ${FUNCNAME[0]} <alias name> <aliased function> [args...]" >&2
+    return 1
+  fi
+  unalias "$name" &>/dev/null || true
+  eval "$name() { $@ \"\$@\"; }"
+  export -f "$name"
+}
+
 defn p2j parquet2json
 defn p2js parquet-2-json.sh schema
 defn pqs parquet-2-json.sh schema
