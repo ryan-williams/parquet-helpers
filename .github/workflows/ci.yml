@@ -15,15 +15,18 @@ jobs:
     - uses: dtolnay/rust-toolchain@stable
     - uses: Swatinem/rust-cache@v2
     - run: cargo install parquet2json
-    - run: pip install 'bmdf>=0.3.1'
+    - run: pip install 'bmdf>=0.3.2'
     - name: Use git-diff-parquet.sh to diff .parquet files
       run: |
         echo "*.parquet diff=parquet" > .gitattributes
         echo "${{ github.workspace }}" >> $GITHUB_PATH
         git config diff.parquet.command git-diff-parquet.sh
+        git config diff.parquet.textconv "parquet2json-all -n2"
+        git config diff.noprefix true  # Remove "a/" and "b/" prefixes in diff/show output
     - name: Verify README examples
       run: |
         . .pqt-rc
+        export SHELL
         mdcmd
         git diff --exit-code
     - name: Verify README TOC
