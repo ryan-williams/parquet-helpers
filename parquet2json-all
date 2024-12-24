@@ -8,32 +8,47 @@ err() {
   echo "$@" >&2
 }
 usage() {
-  err "Usage: $0 [-n <n_rows=10>] [-o <offset>] [-s] <path>"
-  err "  -n: number of rows to display"
-  err "  -o: offset (skip) rows; negative ⟹ last rows"
+  err "Usage: $(basename "$0") [-n <n_rows=10>] [-o <offset>] [-s] <path>"
+  err "  -n: number of rows to display (negative ⇒ all rows)"
+  err "  -o: offset (skip) rows; negative ⇒ last rows"
   err "  -s: compact mode (one object per line)"
   err
-  err "Received (${#args[@]}): ${args[*]}"
+  err 'Opts passed via $PQT_TXT_OPTS will override those passed via CLI (to allow for configuring `git show`):'
+  err
+  err 'The "opts var" itself ("PQT_TXT_OPTS" by default) can also be customized, by setting `$PQT_TXT_OPTS_VAR`, e.g.:'
+  err
+  err '  export PQT_TXT_OPTS_VAR=PQT  # This can be done once, e.g. in your .bashrc'
+  err '  PQT="-sn3" git show          # Shorter var name can then be used to configure diffs rendered by `git show` (in this case: compact output, 3 rows)'
   exit 127
 }
 
 n_rows=10
-print_cmd="jq"
 offset=()
-while getopts "hn:o:s" opt; do
-  case $opt in
-    h) usage ;;
-    n) n_rows="$OPTARG" ;;
-    o) offset=(-o"$OPTARG") ;;
-    s) print_cmd="cat" ;;
-    *) usage ;;
-  esac
-done
+print_cmd="jq"
+parse() {
+  OPTIND=1
+  while getopts "hn:o:s" opt; do
+    case $opt in
+      h) usage ;;
+      n) n_rows="$OPTARG" ;;
+      o) offset=(-o"$OPTARG") ;;
+      s) print_cmd="cat" ;;
+      *) usage ;;
+    esac
+  done
+}
 
-# Shift off the parsed options
+parse "$@"
 shift $((OPTIND-1))
 
-if [ "$n_rows" -eq 0 ]; then
+OPTS_VAR="${PQT_TXT_OPTS_VAR:-PQT_TXT_OPTS}"
+OPTS="${!OPTS_VAR}"
+if [ -n "$OPTS" ]; then
+  IFS=' ' read -ra opts <<< "$OPTS"
+  parse "${opts[@]}"
+fi
+
+if [ "$n_rows" -lt 0 ]; then
   rows=()
 else
   rows=(-l "$n_rows")

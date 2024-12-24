@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-#
-# Pass opts via the $DIFF_PQT_OPTS env var:
-# - `-c`: `--color=always`
-# - `-C`: `--color=never`
-# - `-n`: number of rows to display (default: 2)
-# - `-s`: compact output (a la `jq -c`, one row-object per line; default: one field per line)
-# - `-v`: verbose/debug mode
 
 set -e
 
@@ -23,42 +16,33 @@ usage() {
   err '  # Invoked by e.g. `git diff --no-index --ext-diff`:'
   err "  $name <old version tmpfile> <new version tmpfile>"
   err
-  err 'Pass opts via the $DIFF_PQT_OPTS env var:'
+  err 'Pass opts via the $GIT_DIFF_PQT_OPTS env var:'
   err
   err '- `-c`: `--color=always`'
   err '- `-C`: `--color=never`'
-  err '- `-n`: number of rows to display (default: 2)'
-  err '- `-o`: offset (e.g. `-o100` skips the first 100 rows, -o-5 begins 5 rows from the end)'
-  err '- `-s`: compact output (a la `jq -c`, one row-object per line; default: one field per line)'
   err '- `-v`: verbose/debug mode'
   err
-  err 'The "opts var" itself (default "DIFF_PQT_OPTS") can also be customized, by setting `$DIFF_PQT_OPTS_VAR`, e.g.:'
+  err 'The "opts var" itself ("GIT_DIFF_PQT_OPTS" by default) can also be customized, by setting `$GIT_DIFF_PQT_OPTS_VAR`, e.g.:'
   err
-  err '  export DIFF_PQT_OPTS_VAR=PQT  # This can be done once, e.g. in your .bashrc'
-  err '  PQT="-sn3" git diff           # Shorter var name can then be used to configure diffs (in this case: compact output, 3 rows)'
+  err '  export GIT_DIFF_PQT_OPTS_VAR=GIT_PQT  # This can be done once, e.g. in your .bashrc'
+  err '  GIT_PQT="-cv" git diff                # Shorter var name can then be used to configure diffs (in this case: force colorize, enable debug logging)'
   exit 1
 }
 
 color=
-n=
-offset=()
-compact=()
 verbose=
 parse() {
-  while getopts "cCn:o:sv" opt; do
+  while getopts "cCv" opt; do
     case "$opt" in
       c) color=always ;;
       C) color=never ;;
-      n) n="$OPTARG" ;;
-      o) offset=("-o" "$OPTARG") ;;
-      s) compact=(-s) ;;
       v) verbose=1 ;;
       \?) usage ;;
     esac
   done
 }
 
-OPTS_VAR="${DIFF_PQT_OPTS_VAR:-DIFF_PQT_OPTS}"
+OPTS_VAR="${GIT_DIFF_PQT_OPTS_VAR:-GIT_DIFF_PQT_OPTS}"
 OPTS="${!OPTS_VAR}"
 if [ -n "$OPTS" ]; then
   IFS=' ' read -ra opts <<< "$OPTS"
@@ -74,14 +58,14 @@ if [ -n "$verbose" ]; then
   set -x
 fi
 
-if [ -z "$n" ]; then
-  n="$(git config diff.parquet.n-rows || true)"
-  if [ -z "$n" ]; then
-    n=2
-  fi
-fi
+# Export opt vars for parquet2json-all, set `-n2` fallback
+OPTS_VAR="${PQT_TXT_OPTS_VAR:-PQT_TXT_OPTS}"
+OPTS="-n2 ${!OPTS_VAR}"
+printf -v "$OPTS_VAR" '%s' "-n2 $OPTS"
+export PQT_TXT_OPTS_VAR
+export "$OPTS_VAR"
 
-cmd=(parquet2json-all -n "$n" "${offset[@]}" "${compact[@]}")
+cmd=(parquet2json-all)
 
 if [ "$#" -eq 7 ]; then
   path="$1"  ; shift  # repo relpath
