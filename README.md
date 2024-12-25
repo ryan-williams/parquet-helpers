@@ -17,6 +17,7 @@ Bash scripts/aliases and `git {diff,show}` plugins for Parquet files.
         - [Customizing output with `$PQT_TXT_OPTS`](#customizing)
         - [Appending rows](#appending-rows)
         - [File move](#file-move)
+        - [File move with modifications](#file-move-mods)
 - [Advanced Parquet diffing with `git-diff-x`](#git-diff-x)
     - [Comparing sorted schemas](#sorted-schemas)
     - [Comparing rows sorted by primary key](#sorted-primary-keys)
@@ -469,6 +470,91 @@ git show 07f2234
 # rename to test2.parquet
 ```
 
+#### File move with modifications <a id="file-move-mods"></a>
+[`cb6d349`] moved `test2.parquet` back to `test.parquet`, and renamed "Stop Time" to "End Time":
+
+<!-- `bmdff -stdiff git diff cb6d349^..cb6d349` -->
+```bash
+git diff 'cb6d349^..cb6d349'
+```
+```diff
+test2.parquet..test.parquet (14a2491..6aff192)
+1,2c1,2
+< MD5: dcc622c03f1164196dcd4a9583ba2651
+< 12736 bytes
+---
+> MD5: f94c17ff76a51cf1acb370d065da190d
+> 12732 bytes
+18c18
+<   OPTIONAL INT64 Stop Time (TIMESTAMP(MICROS,false));
+---
+>   OPTIONAL INT64 End Time (TIMESTAMP(MICROS,false));
+35c35
+<   "Stop Time": "2024-11-01T03:01:00.430",
+---
+>   "End Time": "2024-11-01T03:01:00.430",
+52c52
+<   "Stop Time": "2024-11-01T00:36:34.579",
+---
+>   "End Time": "2024-11-01T00:36:34.579",
+
+```
+
+<!-- `bmdfff -stdiff git show cb6d349` -->
+<details><summary><code>git show cb6d349</code></summary>
+
+```diff
+commit cb6d34907b430e6df598de650c5ab625479d6e18
+Author: Ryan Williams <ryan@runsascoded.com>
+Date:   Wed Dec 25 15:07:16 2024 -0500
+
+    `mv test{2,}.parquet`, rename "Stop Time" to "End Time"
+
+diff --git test2.parquet test.parquet
+similarity index 59%
+rename from test2.parquet
+rename to test.parquet
+index 14a2491..6aff192 100644
+--- test2.parquet
++++ test.parquet
+@@ -1,5 +1,5 @@
+-MD5: dcc622c03f1164196dcd4a9583ba2651
+-12736 bytes
++MD5: f94c17ff76a51cf1acb370d065da190d
++12732 bytes
+ 25 rows
+ message schema {
+   OPTIONAL BYTE_ARRAY End Region (STRING);
+@@ -15,7 +15,7 @@ message schema {
+   OPTIONAL DOUBLE Start Station Longitude;
+   OPTIONAL BYTE_ARRAY Start Station Name (STRING);
+   OPTIONAL INT64 Start Time (TIMESTAMP(MICROS,false));
+-  OPTIONAL INT64 Stop Time (TIMESTAMP(MICROS,false));
++  OPTIONAL INT64 End Time (TIMESTAMP(MICROS,false));
+   OPTIONAL BYTE_ARRAY User Type (STRING);
+ }
+ {
+@@ -32,7 +32,7 @@ message schema {
+   "Start Station Longitude": -73.954295,
+   "Start Station Name": "Amsterdam Ave & W 131 St",
+   "Start Time": "2024-10-31T17:24:06.707",
+-  "Stop Time": "2024-11-01T03:01:00.430",
++  "End Time": "2024-11-01T03:01:00.430",
+   "User Type": "Customer"
+ }
+ {
+@@ -49,6 +49,6 @@ message schema {
+   "Start Station Longitude": -73.918316,
+   "Start Station Name": "Walton Ave & E 168 St",
+   "Start Time": "2024-10-31T16:42:08.174",
+-  "Stop Time": "2024-11-01T00:36:34.579",
++  "End Time": "2024-11-01T00:36:34.579",
+   "User Type": "Subscriber"
+ }
+```
+</details>
+
+
 ## Advanced Parquet diffing with [`git-diff-x`] <a id="git-diff-x"></a>
 Scripts in this repo can be used with [`git-diff-x`] (from the [`qmdx`] PyPI package) for even more powerful Parquet-file diffing.
 
@@ -705,6 +791,7 @@ It's a contrived example, but based on real comparisons I did on Parquet files i
 [`69e8ea3`]: https://github.com/ryan-williams/parquet-helpers/commit/69e8ea3
 [`9a9370c`]: https://github.com/ryan-williams/parquet-helpers/commit/9a9370c
 [`07f2234`]: https://github.com/ryan-williams/parquet-helpers/commit/07f2234
+[`cb6d349`]: https://github.com/ryan-williams/parquet-helpers/commit/cb6d349
 [@test]: https://github.com/ryan-williams/parquet-helpers/tree/test
 [`test.py`]: https://github.com/ryan-williams/parquet-helpers/tree/test/test.py
 [`test.parquet`]: https://github.com/ryan-williams/parquet-helpers/tree/test/test.parquet
