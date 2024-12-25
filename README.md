@@ -663,7 +663,7 @@ Putting it all together, we can see that [`9a9370c`] changed `test.parquet` by:
 - Sorting the rows by "Ride ID"
 - Sorting the columns in the schema / within each row.
 
-It's a contrived example, but based on real forensics I did on large-ish Parquet files in [ctbk.dev]. See also [this similar example][ctbk CSV example], from [dvc-utils], dealing with gzipped CSVs of the same Citi Bike data. 
+It's a contrived example, but based on real comparisons I did on Parquet files in [ctbk.dev]. See also [this similar example][ctbk CSV example], from [dvc-utils], dealing with gzipped CSVs of the same Citi Bike data.
 
 [`parquet-2-json.sh`]: ./parquet-2-json.sh
 [`parquet2json-all`]: parquet2json-all
