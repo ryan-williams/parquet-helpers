@@ -16,6 +16,7 @@ Bash scripts/aliases and `git {diff,show}` plugins for Parquet files.
         - [File added](#file-added)
         - [Customizing output with `$PQT_TXT_OPTS`](#customizing)
         - [Appending rows](#appending-rows)
+        - [File move](#file-move)
 - [Advanced Parquet diffing with `git-diff-x`](#git-diff-x)
     - [Comparing sorted schemas](#sorted-schemas)
     - [Comparing rows sorted by primary key](#sorted-primary-keys)
@@ -443,6 +444,31 @@ index 5ca9743..c621f0e 100644
 ```
 </details>
 
+#### File move <a id="file-move"></a>
+[`07f2234`] moved test.parquet to `test2.parquet`:
+
+<!-- `bmdf -stdiff git diff 07f2234^..07f2234` -->
+```bash
+git diff '07f2234^..07f2234'
+# test.parquet..test2.parquet (14a2491..14a2491)
+#
+```
+
+<!-- `bmdf -stdiff git show 07f2234` -->
+```bash
+git show 07f2234
+# commit 07f2234ea762caff378b55e2a8829b2d495cdc4c
+# Author: Ryan Williams <ryan@runsascoded.com>
+# Date:   Wed Dec 25 13:08:52 2024 -0500
+#
+#     `mv test{,2}.parquet`
+#
+# diff --git test.parquet test2.parquet
+# similarity index 100%
+# rename from test.parquet
+# rename to test2.parquet
+```
+
 ## Advanced Parquet diffing with [`git-diff-x`] <a id="git-diff-x"></a>
 Scripts in this repo can be used with [`git-diff-x`] (from the [`qmdx`] PyPI package) for even more powerful Parquet-file diffing.
 
@@ -678,6 +704,7 @@ It's a contrived example, but based on real comparisons I did on Parquet files i
 [`34d2b1d`]: https://github.com/ryan-williams/parquet-helpers/commit/34d2b1d
 [`69e8ea3`]: https://github.com/ryan-williams/parquet-helpers/commit/69e8ea3
 [`9a9370c`]: https://github.com/ryan-williams/parquet-helpers/commit/9a9370c
+[`07f2234`]: https://github.com/ryan-williams/parquet-helpers/commit/07f2234
 [@test]: https://github.com/ryan-williams/parquet-helpers/tree/test
 [`test.py`]: https://github.com/ryan-williams/parquet-helpers/tree/test/test.py
 [`test.parquet`]: https://github.com/ryan-williams/parquet-helpers/tree/test/test.parquet
