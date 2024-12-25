@@ -3,7 +3,7 @@ Bash scripts/aliases and `git {diff,show}` plugins for Parquet files.
 
 <!-- toc -->
 - [`parquet2json` helpers](#parquet2json)
-    - [`.pqt-rc`](#pqt-rc)
+    - [`.pqt-rc`: Bash aliases/functions](#pqt-rc)
     - [Examples](#alias-examples)
         - [`pqn`: row count](#pqn)
         - [`pqs`: schema](#pqs)
@@ -16,6 +16,10 @@ Bash scripts/aliases and `git {diff,show}` plugins for Parquet files.
         - [File added](#file-added)
         - [Customizing output with `$PQT_TXT_OPTS`](#customizing)
         - [Appending rows](#appending-rows)
+- [Advanced Parquet diffing with `git-diff-x`](#git-diff-x)
+    - [Comparing sorted schemas](#sorted-schemas)
+    - [Comparing rows sorted by primary key](#sorted-primary-keys)
+    - [Comparing sorted rows and columns](#sorted-rows-cols)
 <!-- /toc -->
 
 ## [`parquet2json`] helpers <a id="parquet2json"></a>
@@ -39,7 +43,7 @@ cat foo.parquet | pqc  # 🎉 even easier
 # 4
 ```
 
-### [`.pqt-rc`] <a id="pqt-rc"></a>
+### [`.pqt-rc`]: Bash aliases/functions <a id="pqt-rc"></a>
 [`.pqt-rc`] can be `source`d from `~/.bashrc`, and provides useful aliases:
 - `pqn` (`parquet-2-json.sh rowcount`): # rows
 - `pqs` (`parquet-2-json.sh schema`): schema
@@ -439,7 +443,227 @@ index 5ca9743..c621f0e 100644
 ```
 </details>
 
+## Advanced Parquet diffing with [`git-diff-x`] <a id="git-diff-x"></a>
+Scripts in this repo can be used with [`git-diff-x`] (from the [`qmdx`] PyPI package) for even more powerful Parquet-file diffing.
 
+For example, `git {diff,show}` above (even with `$PQT_TXT_OPTS`) aren't much help inferring what happened to `test.parquet` in [`9a9370c`]:
+
+<!-- `bmdfff -stdiff -- git diff 9a9370c^..9a9370c -- test.parquet` -->
+<details><summary><code>git diff '9a9370c^..9a9370c' -- test.parquet</code></summary>
+
+```diff
+test.parquet (c621f0e..14a24910)
+1,2c1,2
+< MD5: 762aeca641059e0773382adab8d23fa5
+< 13786 bytes
+---
+> MD5: dcc622c03f1164196dcd4a9583ba2651
+> 12736 bytes
+4a5,9
+>   OPTIONAL BYTE_ARRAY End Region (STRING);
+>   OPTIONAL BYTE_ARRAY End Station ID (STRING);
+>   OPTIONAL DOUBLE End Station Latitude;
+>   OPTIONAL DOUBLE End Station Longitude;
+>   OPTIONAL BYTE_ARRAY End Station Name (STRING);
+7,9c12
+<   OPTIONAL INT64 Start Time (TIMESTAMP(MICROS,false));
+<   OPTIONAL INT64 Stop Time (TIMESTAMP(MICROS,false));
+<   OPTIONAL BYTE_ARRAY Start Station Name (STRING);
+---
+>   OPTIONAL BYTE_ARRAY Start Region (STRING);
+11,12d13
+<   OPTIONAL BYTE_ARRAY End Station Name (STRING);
+<   OPTIONAL BYTE_ARRAY End Station ID (STRING);
+15,17c16,18
+<   OPTIONAL DOUBLE End Station Latitude;
+<   OPTIONAL DOUBLE End Station Longitude;
+<   OPTIONAL BYTE_ARRAY Gender (STRING);
+---
+>   OPTIONAL BYTE_ARRAY Start Station Name (STRING);
+>   OPTIONAL INT64 Start Time (TIMESTAMP(MICROS,false));
+>   OPTIONAL INT64 Stop Time (TIMESTAMP(MICROS,false));
+19,20d19
+<   OPTIONAL BYTE_ARRAY Start Region (STRING);
+<   OPTIONAL BYTE_ARRAY End Region (STRING);
+23,36c22,28
+<   "Ride ID": "47D7696609CD77E4",
+<   "Rideable Type": "classic_bike",
+<   "Start Time": "2024-10-31T03:53:24.765",
+<   "Stop Time": "2024-11-01T00:10:45.107",
+<   "Start Station Name": "Cedar St & Myrtle Ave",
+<   "Start Station ID": "4751.01",
+<   "End Station Name": "Moffat St & Bushwick",
+<   "End Station ID": "4357.01",
+<   "Start Station Latitude": 40.697842,
+<   "Start Station Longitude": -73.926241,
+<   "End Station Latitude": 40.68458,
+<   "End Station Longitude": -73.90925,
+<   "Gender": "U",
+<   "User Type": "Customer",
+---
+>   "End Region": "NYC",
+>   "End Station ID": "7338.02",
+>   "End Station Latitude": 40.7839636,
+>   "End Station Longitude": -73.9471673,
+>   "End Station Name": "2 Ave & E 96 St",
+>   "Ride ID": "03F9A0B025966750",
+>   "Rideable Type": "electric_bike",
+38c30,36
+<   "End Region": "NYC"
+---
+>   "Start Station ID": "7842.16",
+>   "Start Station Latitude": 40.816355,
+>   "Start Station Longitude": -73.954295,
+>   "Start Station Name": "Amsterdam Ave & W 131 St",
+>   "Start Time": "2024-10-31T17:24:06.707",
+>   "Stop Time": "2024-11-01T03:01:00.430",
+>   "User Type": "Customer"
+41,54c39,45
+<   "Ride ID": "ADE40852FD10329E",
+<   "Rideable Type": "classic_bike",
+<   "Start Time": "2024-10-31T05:18:29.219",
+<   "Stop Time": "2024-11-01T01:03:53.219",
+<   "Start Station Name": "9 Ave & W 39 St",
+<   "Start Station ID": "6644.08",
+<   "End Station Name": "11 Ave & W 59 St",
+<   "End Station ID": "7059.01",
+<   "Start Station Latitude": 40.756403523272496,
+<   "Start Station Longitude": -73.99410143494606,
+<   "End Station Latitude": 40.77149671054441,
+<   "End Station Longitude": -73.99046033620834,
+<   "Gender": "U",
+<   "User Type": "Customer",
+---
+>   "End Region": "NYC",
+>   "End Station ID": "7979.17",
+>   "End Station Latitude": 40.824811,
+>   "End Station Longitude": -73.916407,
+>   "End Station Name": "E 161 St & Park Ave",
+>   "Ride ID": "08D7AFEB94079985",
+>   "Rideable Type": "electric_bike",
+56c47,53
+<   "End Region": "NYC"
+---
+>   "Start Station ID": "8179.03",
+>   "Start Station Latitude": 40.83649,
+>   "Start Station Longitude": -73.918316,
+>   "Start Station Name": "Walton Ave & E 168 St",
+>   "Start Time": "2024-10-31T16:42:08.174",
+>   "Stop Time": "2024-11-01T00:36:34.579",
+>   "User Type": "Subscriber"
+
+```
+</details>
+
+The number of rows evidently stayed the same, but the schema and first 2 previewed rows seem pretty scrambled.
+
+### Comparing sorted schemas <a id="sorted-schemas"></a>
+`git-diff-x -R <commit> pqs sort` is useful for inspecting schema changes: it renders the "before" and "after" schemas as text, and sorts them:
+
+<!-- `bmdff -stdiff git dxr 9a9370c pqs sort test.parquet` -->
+```bash
+git dxr 9a9370c pqs sort test.parquet
+```
+```diff
+4d3
+<   OPTIONAL BYTE_ARRAY Gender (STRING);
+```
+
+([`dxr`] is an alias for `diff-x -R`)
+
+This immediately makes clear that:
+1. The "Gender" field was dropped, and
+2. The remaining fields were merely reordered.
+
+### Comparing rows sorted by primary key <a id="sorted-primary-keys"></a>
+The rows above have an (apparently unique) "Ride ID" column; we can use that to check whether rows were added/deleted or just rearranged:
+
+<!-- `bmdf -stdiff git dxr 9a9370c pqc 'jq ".\"Ride ID\""' sort test.parquet` -->
+```bash
+git dxr 9a9370c pqc 'jq ".\"Ride ID\""' sort test.parquet
+```
+
+Empty diff here implies the rows were just reordered. Viewing the first 10 "Ride ID"s from the "after" version:
+
+<!-- `bmdfff -- git show 9a9370c:test.parquet | pqh | jq -r '."Ride ID"'` -->
+<details><summary><code>git show 9a9370c:test.parquet | pqh | jq -r '."Ride ID"'</code></summary>
+
+```
+03F9A0B025966750
+08D7AFEB94079985
+0C6AC59991FDA228
+1D1C1A99053BD6B2
+203BC6AB04336C9E
+2357DBB7281E26E8
+2ECB677DB071F76A
+35AD489DAF340A5A
+47D7696609CD77E4
+4B6716B2215DEC6D
+```
+</details>
+
+implies that [`9a9370c`] sorted rows by "Ride ID".
+
+### Comparing sorted rows and columns <a id="sorted-rows-cols"></a>
+Diffing again, but sorting the rows by "Ride ID", and only comparing the first row:
+
+<!-- `bmdfff -stdiff git dxr 9a9370c pqc 'jq -s "sort_by(.[\"Ride ID\"])[0]"' test.parquet` -->
+<details><summary><code>git dxr 9a9370c pqc 'jq -s "sort_by(.[\"Ride ID\"])[0]"' test.parquet</code></summary>
+
+```diff
+1a2,6
+>   "End Region": "NYC",
+>   "End Station ID": "7338.02",
+>   "End Station Latitude": 40.7839636,
+>   "End Station Longitude": -73.9471673,
+>   "End Station Name": "2 Ave & E 96 St",
+4,6c9
+<   "Start Time": "2024-10-31T17:24:06.707",
+<   "Stop Time": "2024-11-01T03:01:00.430",
+<   "Start Station Name": "Amsterdam Ave & W 131 St",
+---
+>   "Start Region": "NYC",
+8,9d10
+<   "End Station Name": "2 Ave & E 96 St",
+<   "End Station ID": "7338.02",
+12,17c13,16
+<   "End Station Latitude": 40.7839636,
+<   "End Station Longitude": -73.9471673,
+<   "Gender": "U",
+<   "User Type": "Customer",
+<   "Start Region": "NYC",
+<   "End Region": "NYC"
+---
+>   "Start Station Name": "Amsterdam Ave & W 131 St",
+>   "Start Time": "2024-10-31T17:24:06.707",
+>   "Stop Time": "2024-11-01T03:01:00.430",
+>   "User Type": "Customer"
+```
+</details>
+
+It seems to be the same object, but with the keys reordered. Here we check by sorting the keys within the first row (after sorting by "Ride ID"), examining just the first 5 rows:
+
+<!-- `bmdf -stdiff git dxr 9a9370c pqc 'jq -s "sort_by(.[\"Ride ID\"])[:5][] | to_entries | sort_by(.key) | from_entries"' test.parquet` -->
+```bash
+git dxr 9a9370c pqc 'jq -s "sort_by(.[\"Ride ID\"])[:5][] | to_entries | sort_by(.key) | from_entries"' test.parquet
+# 7d6
+# <   "Gender": "U",
+# 25d23
+# <   "Gender": "U",
+# 43d40
+# <   "Gender": "U",
+# 61d57
+# <   "Gender": "U",
+# 79d74
+# <   "Gender": "U",
+```
+
+Putting it all together, we can see that [`9a9370c`] changed `test.parquet` by:
+- Dropping the "Gender" column
+- Sorting the rows by "Ride ID"
+- Sorting the columns in the schema / within each row.
+
+It's a contrived example, but based on real forensics I did on large-ish Parquet files in [ctbk.dev]. See also [this similar example][ctbk CSV example], from [dvc-utils], dealing with gzipped CSVs of the same Citi Bike data. 
 
 [`parquet-2-json.sh`]: ./parquet-2-json.sh
 [`parquet2json-all`]: parquet2json-all
@@ -447,11 +671,20 @@ index 5ca9743..c621f0e 100644
 [`.pqt-rc`]: ./.pqt-rc
 [`parquet2json`]: https://github.com/jupiter/parquet2json/
 [JSONL]: https://jsonlines.org/
+
 [`63dcdba`]: https://github.com/ryan-williams/parquet-helpers/commit/63dcdba
 [`test.parquet@63dcdba`]: https://github.com/ryan-williams/parquet-helpers/commit/63dcdba/test.parquet
 [`c232deb`]: https://github.com/ryan-williams/parquet-helpers/commit/c232deb
 [`34d2b1d`]: https://github.com/ryan-williams/parquet-helpers/commit/34d2b1d
 [`69e8ea3`]: https://github.com/ryan-williams/parquet-helpers/commit/69e8ea3
+[`9a9370c`]: https://github.com/ryan-williams/parquet-helpers/commit/9a9370c
 [@test]: https://github.com/ryan-williams/parquet-helpers/tree/test
 [`test.py`]: https://github.com/ryan-williams/parquet-helpers/tree/test/test.py
 [`test.parquet`]: https://github.com/ryan-williams/parquet-helpers/tree/test/test.parquet
+
+[`qmdx`]: https://pypi.org/project/qmdx/
+[`git-diff-x`]: https://github.com/runsascoded/qmdx?tab=readme-ov-file#git-diff-x
+[`dxr`]: https://github.com/ryan-williams/git-helpers/blob/5f27c2e4e88e3e14ede21483c998bdbe2cfccc6f/diff/.gitconfig#L69
+[ctbk.dev]: https://github.com/neighbor-ryan/ctbk.dev
+[ctbk CSV example]: https://github.com/runsascoded/dvc-utils?tab=readme-ov-file#csv-gz
+[dvc-utils]: https://pypi.org/project/dvc-utils/
