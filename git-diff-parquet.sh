@@ -106,9 +106,19 @@ if [ "$#" -eq 7 ]; then
 elif [ $# -eq 9 ]; then
   # Called via e.g. `git diff --no-index --ext-diff "$tmppath0" "$tmppath1"` in `git-diff-dvc.sh`
   pqt0="$1"
+  if [ -z "$pqt0" ] || [ "$pqt0" == /dev/null ]; then
+    pqt0=/dev/null
+    cmd0=(cat)
+  else
+    cmd0=("${cmd[@]}")
+  fi
   pqt1="$8"
-  cmd0=("${cmd[@]}")
-  cmd1=("${cmd[@]}")
+  if [ -z "$pqt1" ] || [ "$pqt1" == /dev/null ]; then
+    pqt1=/dev/null
+    cmd1=(cat)
+  else
+    cmd1=("${cmd[@]}")
+  fi
 else
   usage
 fi
