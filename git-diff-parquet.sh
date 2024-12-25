@@ -6,6 +6,11 @@ err() {
   echo "$*" >&2
 }
 
+# err "$# args:"
+# for arg in "$@"; do
+#   err "  $arg"
+# done
+
 usage() {
   name="$(basename "$0")"
   err "$name:"
@@ -67,33 +72,94 @@ export "$OPTS_VAR"
 
 cmd=(parquet2json-all)
 
-if [ "$#" -eq 7 ]; then
-  path="$1"  ; shift  # repo relpath
+if [ $# -eq 7 ] || [ $# -eq 9 ]; then
+  path0="$1"  ; shift  # repo relpath
   pqt0="$1"  ; shift  # old version
   hex0="$1"  ; shift  # old hexsha
   mode0="$1" ; shift  # old filemode
   pqt1="$1"  ; shift  # new version
   hex1="$1"  ; shift  # new hexsha
   mode1="$1" ; shift  # new filemode
+  if [ $# -eq 2 ]; then
+    path1="$1" ; shift  # new repo relpath
+    index="$1" ; shift  # index range or info
+    if [ "$path1" == "$pqt1" ]; then
+      # Callers can construct tempfiles at "`mktemp`/{0,1}/<relpath>", e.g. `git-diff-dvc.sh` (from https://github.com/ryan-williams/dvc-helpers)
+      path1="${path1##*/1/}"
+    fi
+  else
+    path1=
+    index=
+  fi
+  if [ "$path0" == "$pqt0" ]; then
+    # Callers can construct tempfiles at "`mktemp`/{0,1}/<relpath>", e.g. `git-diff-dvc.sh` (from https://github.com/ryan-williams/dvc-helpers)
+    path0="${path0##*/0/}"
+  fi
+  # Example 9-arg invocations:
+  #
+  # `git diff --cached` with a changed DVC dir:
+  # ```
+  # /var/folders/dc/gqj_cd8d0d9c1nppd5_yl7bc0000gn/T/tmp.MDhcfE6Y1W/0/data/test.parquet
+  # /var/folders/dc/gqj_cd8d0d9c1nppd5_yl7bc0000gn/T/tmp.MDhcfE6Y1W/0/data/test.parquet
+  # 0000000000000000000000000000000000000000
+  # 100644
+  # /var/folders/dc/gqj_cd8d0d9c1nppd5_yl7bc0000gn/T/tmp.MDhcfE6Y1W/1/data/test.parquet
+  # 0000000000000000000000000000000000000000
+  # 100644
+  # /var/folders/dc/gqj_cd8d0d9c1nppd5_yl7bc0000gn/T/tmp.MDhcfE6Y1W/1/data/test.parquet
+  # index 0109fa9..8d25654 100644
+  # ```
+  #
+  # `git diff test^..test` when `test` commit performed `git mv test{,2}.parquet`:
+  # ```
+  # test.parquet
+  # /var/folders/dc/gqj_cd8d0d9c1nppd5_yl7bc0000gn/T//git-blob-JdmzEA/test.parquet
+  # 14a2491912de12a8039bdf0fa3e846593b5bcf0b
+  # 100644
+  # /var/folders/dc/gqj_cd8d0d9c1nppd5_yl7bc0000gn/T//git-blob-DqNBDU/test2.parquet
+  # 14a2491912de12a8039bdf0fa3e846593b5bcf0b
+  # 100644
+  # test2.parquet
+  # similarity index 100%
+  # ```
 
   if [ "$mode0" == . ]; then mode0=; fi
   if [ "$mode1" == . ]; then mode1=; fi
 
-  mode_str=0
+  mode_str=
   if [ "$mode0" != "$mode1" ]; then
-    mode_str=", $mode0..$mode1"
+    mode_str="$mode0..$mode1"
   fi
+  null_mode=000000
   if [ "$hex0" == . ]; then
-    hx0=000000
+    hx0="$null_mode"
   else
     hx0="$(git rev-parse --short "$hex0")"
   fi
   if [ "$hex1" == . ]; then
-    hx1=000000
+    hx1="$null_mode"
   else
     hx1="$(git rev-parse --short "$hex1")"
   fi
-  err "$path ($hx0..$hx1$mode_str)"
+  hex_str="$hx0..$hx1"
+  if [[ $hx0 =~ ^0+$ ]] && [[ $hx1 =~ ^0+$ ]]; then
+    hex_str=
+  fi
+  hex_mode_str=
+  if [ -n "$hex_str" ] || [ -n "$mode_str" ]; then
+    hex_mode_str=" ("
+    if [ -n "$hex_str" ] && [ -n "$mode_str" ]; then
+      hex_mode_str+="$hex_str, $mode_str"
+    else
+      hex_mode_str+="$hex_str$mode_str"
+    fi
+    hex_mode_str+=")"
+  fi
+  path_str="$path0"
+  if [ -n "$path1" ] && [ "$path0" != "$path1" ]; then
+    path_str="$path0..$path1"
+  fi
+  err "$path_str$hex_mode_str"
 
   cmd0=("${cmd[@]}")
   cmd1=("${cmd[@]}")
@@ -102,22 +168,6 @@ if [ "$#" -eq 7 ]; then
   fi
   if [ "$hex1" == . ]; then
     cmd1=(cat)
-  fi
-elif [ $# -eq 9 ]; then
-  # Called via e.g. `git diff --no-index --ext-diff "$tmppath0" "$tmppath1"` in `git-diff-dvc.sh`
-  pqt0="$1"
-  if [ -z "$pqt0" ] || [ "$pqt0" == /dev/null ]; then
-    pqt0=/dev/null
-    cmd0=(cat)
-  else
-    cmd0=("${cmd[@]}")
-  fi
-  pqt1="$8"
-  if [ -z "$pqt1" ] || [ "$pqt1" == /dev/null ]; then
-    pqt1=/dev/null
-    cmd1=(cat)
-  else
-    cmd1=("${cmd[@]}")
   fi
 else
   usage

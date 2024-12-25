@@ -132,7 +132,7 @@ Using commits from the [@test] branch:
 git diff '63dcdba^..63dcdba'
 ```
 ```diff
-test.parquet (3a84f68..27fb7a10)
+test.parquet (3a84f68..27fb7a1)
 1,2c1,2
 < MD5: 7957c8cc859f03517dcdac05dcdfee8a
 < 13274 bytes
@@ -194,7 +194,7 @@ index 3a84f68..27fb7a1 100644
 git diff '34d2b1d^..34d2b1d' -- test.parquet
 ```
 ```diff
-test.parquet (27fb7a1..5ca97430)
+test.parquet (27fb7a1..5ca9743)
 1,2c1,2
 < MD5: 7c079c1420c5edffc54955a54ca38795
 < 13245 bytes
@@ -386,7 +386,7 @@ parquet2json-all -h
 PQT_TXT_OPTS=-sn-1 -o20 git diff '69e8ea3^..69e8ea3'
 ```
 ```diff
-test.parquet (5ca9743..c621f0e0)
+test.parquet (5ca9743..c621f0e)
 1,3c1,3
 < MD5: 0bf2c7f825a70660319e578201a04543
 < 13343 bytes
@@ -452,7 +452,7 @@ For example, `git {diff,show}` above (even with `$PQT_TXT_OPTS`) aren't much hel
 <details><summary><code>git diff '9a9370c^..9a9370c' -- test.parquet</code></summary>
 
 ```diff
-test.parquet (c621f0e..14a24910)
+test.parquet (c621f0e..14a2491)
 1,2c1,2
 < MD5: 762aeca641059e0773382adab8d23fa5
 < 13786 bytes
