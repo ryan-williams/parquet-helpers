@@ -3,6 +3,7 @@ Bash scripts/aliases and `git {diff,show}` plugins for Parquet files.
 
 <!-- toc -->
 - [`parquet2json` helpers](#parquet2json)
+    - [`.pqt-rc`](#pqt-rc)
     - [Examples](#alias-examples)
         - [`pqn`: row count](#pqn)
         - [`pqs`: schema](#pqs)
@@ -38,7 +39,8 @@ cat foo.parquet | pqc  # 🎉 even easier
 # 4
 ```
 
-Useful aliases (from [.pqt-rc]):
+### [`.pqt-rc`] <a id="pqt-rc"></a>
+[`.pqt-rc`] can be `source`d from `~/.bashrc`, and provides useful aliases:
 - `pqn` (`parquet-2-json.sh rowcount`): # rows
 - `pqs` (`parquet-2-json.sh schema`): schema
 - `pqc` (`parquet-2-json.sh cat`): print all rows (as [JSONL])
@@ -441,8 +443,8 @@ index 5ca9743..c621f0e 100644
 
 [`parquet-2-json.sh`]: ./parquet-2-json.sh
 [`parquet2json-all`]: parquet2json-all
-[.pqt-rc]: ./.pqt-rc
 [git-diff-parquet.sh]: ./git-diff-parquet.sh
+[`.pqt-rc`]: ./.pqt-rc
 [`parquet2json`]: https://github.com/jupiter/parquet2json/
 [JSONL]: https://jsonlines.org/
 [`63dcdba`]: https://github.com/ryan-williams/parquet-helpers/commit/63dcdba
