@@ -34,13 +34,13 @@ usage() {
   exit 1
 }
 
-color=
+color=()
 verbose=
 parse() {
   while getopts "cCv" opt; do
     case "$opt" in
-      c) color=always ;;
-      C) color=never ;;
+      c) color=(--color=always) ;;
+      C) color=(--color=never) ;;
       v) verbose=1 ;;
       \?) usage ;;
     esac
@@ -173,15 +173,8 @@ else
   usage
 fi
 
-if [ -z "$color" ]; then
-  if [ -t 0 ]; then
-    color=always
-  else
-    color=never
-  fi
-fi
 set +e
-diff --color=$color <("${cmd0[@]}" "$pqt0") <("${cmd1[@]}" "$pqt1")
+diff "${color[@]}" <("${cmd0[@]}" "$pqt0") <("${cmd1[@]}" "$pqt1")
 set -e
 rv=$?
 echo
