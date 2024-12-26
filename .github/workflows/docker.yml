@@ -1,0 +1,26 @@
+name: Verify example Ubuntu Docker Build + Test
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+jobs:
+  verify-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: git fetch origin test:test
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: git-diff-parquet
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Run container (verify README examples)
+        run: docker run --rm git-diff-parquet
