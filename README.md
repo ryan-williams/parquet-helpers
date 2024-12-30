@@ -385,7 +385,7 @@ parquet2json-all -h
 
 <!-- `bmdff -stdiff -EPQT_TXT_OPTS="-sn-1 -o20" git diff 69e8ea3^..69e8ea3` -->
 ```bash
-PQT_TXT_OPTS=-sn-1 -o20 git diff '69e8ea3^..69e8ea3'
+"PQT_TXT_OPTS=-sn-1 -o20" git diff '69e8ea3^..69e8ea3'
 ```
 ```diff
 test.parquet (5ca9743..c621f0e)
@@ -410,7 +410,7 @@ test.parquet (5ca9743..c621f0e)
 
 And with `git show`:
 <!-- `bmdfff -stdiff -EPQT_TXT_OPTS="-sn-1 -o20" git show 69e8ea3` -->
-<details><summary><code>PQT_TXT_OPTS=-sn-1 -o20 git show 69e8ea3</code></summary>
+<details><summary><code>"PQT_TXT_OPTS=-sn-1 -o20" git show 69e8ea3</code></summary>
 
 ```diff
 commit 69e8ea39952a90a0313506dba649d789837936f2
@@ -698,7 +698,7 @@ git dxr 9a9370c pqc 'jq ".\"Ride ID\""' sort test.parquet
 Empty diff here implies the rows were just reordered. Viewing the first 10 "Ride ID"s from the "after" version:
 
 <!-- `bmdfff -- git show 9a9370c:test.parquet | pqh | jq -r '."Ride ID"'` -->
-<details><summary><code>git show 9a9370c:test.parquet | pqh | jq -r '."Ride ID"'</code></summary>
+<details><summary><code>git show 9a9370c:test.parquet | pqh | jq -r ".\"Ride ID\""</code></summary>
 
 ```
 03F9A0B025966750
@@ -714,7 +714,7 @@ Empty diff here implies the rows were just reordered. Viewing the first 10 "Ride
 ```
 </details>
 
-implies that [`9a9370c`] sorted rows by "Ride ID".
+implies that [`9a9370c`] sorted rows by "Ride ID". Let's check that…
 
 ### Comparing sorted rows and columns <a id="sorted-rows-cols"></a>
 Diffing again, but sorting the rows by "Ride ID", and only comparing the first row:
