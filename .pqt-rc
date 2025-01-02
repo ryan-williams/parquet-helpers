@@ -38,6 +38,8 @@ defn pqh parquet-2-json.sh cat -l 10
 defn p2jhn parquet-2-json.sh cat -l
 defn pqhn parquet-2-json.sh cat -l
 
+defn pqm parquet-metadata.py
+
 parquet2json_jq() {
     if [ $# -eq 0 ]; then
         echo "Usage: ${FUNCNAME[0]} [...args] <jq-filter>" >&2
