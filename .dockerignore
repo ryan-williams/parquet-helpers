@@ -5,4 +5,5 @@
 !README.md
 !git-diff-parquet.sh
 !parquet-2-json.sh
+!parquet-metadata.py
 !parquet2json-all
