@@ -8,7 +8,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
 ENV VIRTUAL_ENV=.venv
 ENV PATH=/$VIRTUAL_ENV/bin:$PATH
 RUN python3 -m venv $VIRTUAL_ENV \
- && pip3 install 'bmdf>=0.4.0' 'qmdx>=0.0.5'
+ && pip3 install 'bmdf>=0.4.0' 'dffs>=0.0.5'
 
 SHELL ["/bin/bash", "-c"]
 
