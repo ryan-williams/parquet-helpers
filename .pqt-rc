@@ -89,4 +89,5 @@ defn pqa2 parquet2json-all -n 2
 defn pqa3 parquet2json-all -n 3
 defn pqa5 parquet2json-all -n 5
 defn pqac parquet2json-all -s
+defn pqan parquet2json-all -n
 defn pqas parquet2json-all -s

@@ -40,7 +40,7 @@ if [ "$subcmd" == cat ]; then
       c) opts+=(-c "$OPTARG") ;;
       l) opts+=(-l "$OPTARG") ;;
       n) opts+=(-n) ;;
-      o) opts+=(-o "$OPTARG") ;;
+      o) opts+=("-o$OPTARG") ;;
       \?) usage ;;
     esac
   done

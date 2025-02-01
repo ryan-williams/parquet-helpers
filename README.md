@@ -112,7 +112,7 @@ echo "export PATH=$PATH:$PWD" >> ~/.bashrc && . ~/.bashrc
 
 # Git configs
 git config --global diff.parquet.command git-diff-parquet.sh      # For git diff
-git config --global diff.parquet.textconv "parquet2json-all -n2"  # For git show, include 2 rows by default
+git config --global diff.parquet.textconv "parquet2json-all -n2"  # For git show, include first and last 2 rows
 
 # Git attributes (map globs/extensions to commands above):
 git config --global core.attributesfile ~/.gitattributes
@@ -207,17 +207,25 @@ test.parquet (27fb7a1..5ca9743)
 <   OPTIONAL INT32 Gender (INTEGER(8,true));
 ---
 >   OPTIONAL BYTE_ARRAY Gender (STRING);
-35c35
+36c36
 <   "Gender": 0,
 ---
 >   "Gender": "U",
-53c53
+54c54
+<   "Gender": 0,
+---
+>   "Gender": "U",
+73c73
+<   "Gender": 0,
+---
+>   "Gender": "U",
+91c91
 <   "Gender": 0,
 ---
 >   "Gender": "U",
 
 ```
-Here we see diffs to the first two rows of data (in addition to the MD5, size, and schema).
+Here we see diffs to the first and last two rows of data (in addition to the MD5, size, and schema).
 
 Similarly, with `git show`:
 <!-- `bmdfff -stdiff -- git show 34d2b1d` -->
@@ -251,7 +259,7 @@ index 27fb7a1..5ca9743 100644
    OPTIONAL BYTE_ARRAY User Type (STRING);
    OPTIONAL BYTE_ARRAY Start Region (STRING);
    OPTIONAL BYTE_ARRAY End Region (STRING);
-@@ -32,7 +32,7 @@ message schema {
+@@ -33,7 +33,7 @@ First 2 rows:
    "Start Station Longitude": -73.926241,
    "End Station Latitude": 40.68458,
    "End Station Longitude": -73.90925,
@@ -260,10 +268,28 @@ index 27fb7a1..5ca9743 100644
    "User Type": "Customer",
    "Start Region": "NYC",
    "End Region": "NYC"
-@@ -50,7 +50,7 @@ message schema {
+@@ -51,7 +51,7 @@ First 2 rows:
    "Start Station Longitude": -73.99410143494606,
    "End Station Latitude": 40.77149671054441,
    "End Station Longitude": -73.99046033620834,
+-  "Gender": 0,
++  "Gender": "U",
+   "User Type": "Customer",
+   "Start Region": "NYC",
+   "End Region": "NYC"
+@@ -70,7 +70,7 @@ Last 2 rows:
+   "Start Station Longitude": -73.9532423,
+   "End Station Latitude": 40.84463,
+   "End Station Longitude": -73.87988,
+-  "Gender": 0,
++  "Gender": "U",
+   "User Type": "Customer",
+   "Start Region": "NYC",
+   "End Region": "NYC"
+@@ -88,7 +88,7 @@ Last 2 rows:
+   "Start Station Longitude": -73.9532423,
+   "End Station Latitude": 40.830529,
+   "End Station Longitude": -73.894717,
 -  "Gender": 0,
 +  "Gender": "U",
    "User Type": "Customer",
@@ -292,7 +318,7 @@ PQT_TXT_OPTS=-s git diff 'c232deb^..c232deb'
 ```
 ```diff
 test.parquet (000000..3a84f68, ..100644)
-0a1,23
+0a1,27
 > MD5: 7957c8cc859f03517dcdac05dcdfee8a
 > 13274 bytes
 > 20 rows
@@ -314,10 +340,16 @@ test.parquet (000000..3a84f68, ..100644)
 >   OPTIONAL BYTE_ARRAY Start Region (STRING);
 >   OPTIONAL BYTE_ARRAY End Region (STRING);
 > }
+> First 2 rows:
 > {"Ride ID":"47D7696609CD77E4","Rideable Type":"classic_bike","Start Time":"2024-10-31T03:53:24.765","Stop Time":"2024-11-01T00:10:45.107","Start Station Name":"Cedar St & Myrtle Ave","Start Station ID":"4751.01","End Station Name":"Moffat St & Bushwick","End Station ID":"4357.01","Start Station Latitude":40.697842,"Start Station Longitude":-73.926241,"End Station Latitude":40.68458,"End Station Longitude":-73.90925,"Gender":0,"User Type":"Customer","Start Region":"NYC","End Region":"NYC"}
 > {"Ride ID":"ADE40852FD10329E","Rideable Type":"classic_bike","Start Time":"2024-10-31T05:18:29.219","Stop Time":"2024-11-01T01:03:53.219","Start Station Name":"9 Ave & W 39 St","Start Station ID":"6644.08","End Station Name":"11 Ave & W 59 St","End Station ID":"7059.01","Start Station Latitude":40.756403523272496,"Start Station Longitude":-73.99410143494606,"End Station Latitude":40.77149671054441,"End Station Longitude":-73.99046033620834,"Gender":0,"User Type":"Customer","Start Region":"NYC","End Region":"NYC"}
+> Last 2 rows:
+> {"Ride ID":"6FC782109BE6324C","Rideable Type":"electric_bike","Start Time":"2024-10-31T18:14:03.015","Stop Time":"2024-11-01T00:05:26.225","Start Station Name":"Adam Clayton Powell Blvd & W 115 St","Start Station ID":"7643.18","End Station Name":"Vyse Ave & E 181 St","End Station ID":"8306.03","Start Station Latitude":40.802535,"Start Station Longitude":-73.9532423,"End Station Latitude":40.84463,"End Station Longitude":-73.87988,"Gender":0,"User Type":"Customer","Start Region":"NYC","End Region":"NYC"}
+> {"Ride ID":"1D1C1A99053BD6B2","Rideable Type":"electric_bike","Start Time":"2024-10-31T18:14:18.703","Stop Time":"2024-11-01T00:18:10.884","Start Station Name":"Adam Clayton Powell Blvd & W 115 St","Start Station ID":"7643.18","End Station Name":"Freeman St & Reverend James A Polite Ave","End Station ID":"8080.01","Start Station Latitude":40.802535,"Start Station Longitude":-73.9532423,"End Station Latitude":40.830529,"End Station Longitude":-73.894717,"Gender":0,"User Type":"Customer","Start Region":"NYC","End Region":"NYC"}
 
 ```
+
+`PQT_TXT_OPTS=-s` causes the previewed rows to be compact (one object per line).
 
 Similarly, with `git show`:
 <!-- `bmdfff -stdiff -EPQT_TXT_OPTS=-s git show c232deb` -->
@@ -335,7 +367,7 @@ new file mode 100644
 index 0000000..3a84f68
 --- /dev/null
 +++ test.parquet
-@@ -0,0 +1,23 @@
+@@ -0,0 +1,27 @@
 +MD5: 7957c8cc859f03517dcdac05dcdfee8a
 +13274 bytes
 +20 rows
@@ -357,8 +389,12 @@ index 0000000..3a84f68
 +  OPTIONAL BYTE_ARRAY Start Region (STRING);
 +  OPTIONAL BYTE_ARRAY End Region (STRING);
 +}
++First 2 rows:
 +{"Ride ID":"47D7696609CD77E4","Rideable Type":"classic_bike","Start Time":"2024-10-31T03:53:24.765","Stop Time":"2024-11-01T00:10:45.107","Start Station Name":"Cedar St & Myrtle Ave","Start Station ID":"4751.01","End Station Name":"Moffat St & Bushwick","End Station ID":"4357.01","Start Station Latitude":40.697842,"Start Station Longitude":-73.926241,"End Station Latitude":40.68458,"End Station Longitude":-73.90925,"Gender":0,"User Type":"Customer","Start Region":"NYC","End Region":"NYC"}
 +{"Ride ID":"ADE40852FD10329E","Rideable Type":"classic_bike","Start Time":"2024-10-31T05:18:29.219","Stop Time":"2024-11-01T01:03:53.219","Start Station Name":"9 Ave & W 39 St","Start Station ID":"6644.08","End Station Name":"11 Ave & W 59 St","End Station ID":"7059.01","Start Station Latitude":40.756403523272496,"Start Station Longitude":-73.99410143494606,"End Station Latitude":40.77149671054441,"End Station Longitude":-73.99046033620834,"Gender":0,"User Type":"Customer","Start Region":"NYC","End Region":"NYC"}
++Last 2 rows:
++{"Ride ID":"6FC782109BE6324C","Rideable Type":"electric_bike","Start Time":"2024-10-31T18:14:03.015","Stop Time":"2024-11-01T00:05:26.225","Start Station Name":"Adam Clayton Powell Blvd & W 115 St","Start Station ID":"7643.18","End Station Name":"Vyse Ave & E 181 St","End Station ID":"8306.03","Start Station Latitude":40.802535,"Start Station Longitude":-73.9532423,"End Station Latitude":40.84463,"End Station Longitude":-73.87988,"Gender":0,"User Type":"Customer","Start Region":"NYC","End Region":"NYC"}
++{"Ride ID":"1D1C1A99053BD6B2","Rideable Type":"electric_bike","Start Time":"2024-10-31T18:14:18.703","Stop Time":"2024-11-01T00:18:10.884","Start Station Name":"Adam Clayton Powell Blvd & W 115 St","Start Station ID":"7643.18","End Station Name":"Freeman St & Reverend James A Polite Ave","End Station ID":"8080.01","Start Station Latitude":40.802535,"Start Station Longitude":-73.9532423,"End Station Latitude":40.830529,"End Station Longitude":-73.894717,"Gender":0,"User Type":"Customer","Start Region":"NYC","End Region":"NYC"}
 ```
 </details>
 
@@ -367,9 +403,9 @@ index 0000000..3a84f68
 <!-- `bmdf -- parquet2json-all -h` -->
 ```bash
 parquet2json-all -h
-# Usage: parquet2json-all [-n <n_rows=10>] [-o <offset>] [-s] <path>
-#   -n: number of rows to display (negative ⇒ all rows)
-#   -o: offset (skip) rows; negative ⇒ last rows
+# Usage: parquet2json-all [-n <head_rows=10>] [-o <offset_args>] [-s] <path>
+#   -n: number of first and last rows to display; comma-separate to distinguish head/tail (e.g. default `-n3` is equivalent to `-n3,3`, which displays 3 rows from start and end). `,` prints all rows (useful in conjunction with an `-o` offset).
+#   -o: skip this number of rows; negative ⇒ skip to last N rows
 #   -s: compact mode (one object per line)
 #
 # Opts passed via $PQT_TXT_OPTS will override those passed via CLI (to allow for configuring `git show`):
@@ -381,11 +417,11 @@ parquet2json-all -h
 ```
 
 #### Appending rows <a id="appending-rows"></a>
-[`69e8ea3`] appends 5 rows to [`test.parquet`]; `-n-1` (compare all rows) and `-o20` (skip first 20 rows) is a nice way to view this case:
+[`69e8ea3`] appends 5 rows to [`test.parquet`]; `-n,` (compare all rows) and `-o20` (skip first 20 rows) is a nice way to view this case:
 
-<!-- `bmdff -stdiff -EPQT_TXT_OPTS="-sn-1 -o20" git diff 69e8ea3^..69e8ea3` -->
+<!-- `bmdff -stdiff -EPQT_TXT_OPTS="-sn, -o20" git diff 69e8ea3^..69e8ea3` -->
 ```bash
-"PQT_TXT_OPTS=-sn-1 -o20" git diff '69e8ea3^..69e8ea3'
+"PQT_TXT_OPTS=-sn, -o20" git diff '69e8ea3^..69e8ea3'
 ```
 ```diff
 test.parquet (5ca9743..c621f0e)
@@ -406,11 +442,11 @@ test.parquet (5ca9743..c621f0e)
 
 ```
 
-`-o<offset>` can also be negative, printing the last `<offset>` rows of the file (though in this case it would make for a noisier diff, since the "before" side's last rows are expected to be different from the "after" side's).
+`-o<offset>` can also be negative, printing the last `<offset>` rows of the file. In the example above, that would make for a noisier diff (since the "before" side's last rows are expected to be different from the "after" side's); `-n, -o20` (print all rows, beginning from offset 20) works better.
 
-And with `git show`:
-<!-- `bmdfff -stdiff -EPQT_TXT_OPTS="-sn-1 -o20" git show 69e8ea3` -->
-<details><summary><code>"PQT_TXT_OPTS=-sn-1 -o20" git show 69e8ea3</code></summary>
+Again with `git show`:
+<!-- `bmdfff -stdiff -EPQT_TXT_OPTS="-sn, -o20" git show 69e8ea3` -->
+<details><summary><code>"PQT_TXT_OPTS=-sn, -o20" git show 69e8ea3</code></summary>
 
 ```diff
 commit 69e8ea39952a90a0313506dba649d789837936f2
@@ -489,14 +525,22 @@ test2.parquet..test.parquet (14a2491..6aff192)
 <   OPTIONAL INT64 Stop Time (TIMESTAMP(MICROS,false));
 ---
 >   OPTIONAL INT64 End Time (TIMESTAMP(MICROS,false));
-35c35
+36c36
 <   "Stop Time": "2024-11-01T03:01:00.430",
 ---
 >   "End Time": "2024-11-01T03:01:00.430",
-52c52
+53c53
 <   "Stop Time": "2024-11-01T00:36:34.579",
 ---
 >   "End Time": "2024-11-01T00:36:34.579",
+71c71
+<   "Stop Time": "2024-11-01T18:05:01.028",
+---
+>   "End Time": "2024-11-01T18:05:01.028",
+88c88
+<   "Stop Time": "2024-11-01T02:38:14.161",
+---
+>   "End Time": "2024-11-01T02:38:14.161",
 
 ```
 
@@ -533,8 +577,8 @@ index 14a2491..6aff192 100644
 +  OPTIONAL INT64 End Time (TIMESTAMP(MICROS,false));
    OPTIONAL BYTE_ARRAY User Type (STRING);
  }
- {
-@@ -32,7 +32,7 @@ message schema {
+ First 2 rows:
+@@ -33,7 +33,7 @@ First 2 rows:
    "Start Station Longitude": -73.954295,
    "Start Station Name": "Amsterdam Ave & W 131 St",
    "Start Time": "2024-10-31T17:24:06.707",
@@ -543,7 +587,7 @@ index 14a2491..6aff192 100644
    "User Type": "Customer"
  }
  {
-@@ -49,6 +49,6 @@ message schema {
+@@ -50,7 +50,7 @@ First 2 rows:
    "Start Station Longitude": -73.918316,
    "Start Station Name": "Walton Ave & E 168 St",
    "Start Time": "2024-10-31T16:42:08.174",
@@ -551,12 +595,30 @@ index 14a2491..6aff192 100644
 +  "End Time": "2024-11-01T00:36:34.579",
    "User Type": "Subscriber"
  }
+ Last 2 rows:
+@@ -68,7 +68,7 @@ Last 2 rows:
+   "Start Station Longitude": -73.973736,
+   "Start Station Name": "Carlton Ave & Flushing Ave",
+   "Start Time": "2024-10-31T17:11:11.877",
+-  "Stop Time": "2024-11-01T18:05:01.028",
++  "End Time": "2024-11-01T18:05:01.028",
+   "User Type": "Subscriber"
+ }
+ {
+@@ -85,6 +85,6 @@ Last 2 rows:
+   "Start Station Longitude": -73.98034,
+   "Start Station Name": "St Marks Pl & 4 Ave",
+   "Start Time": "2024-10-31T15:54:09.615",
+-  "Stop Time": "2024-11-01T02:38:14.161",
++  "End Time": "2024-11-01T02:38:14.161",
+   "User Type": "Customer"
+ }
 ```
 </details>
 
 
 ## Advanced Parquet diffing with [`git-diff-x`] <a id="git-diff-x"></a>
-Scripts in this repo can be used with [`git-diff-x`] (from the [`qmdx`] PyPI package) for even more powerful Parquet-file diffing.
+Scripts in this repo can be used with [`git-diff-x`] (from the [`dffs`] PyPI package) for even more powerful Parquet-file diffing.
 
 For example, `git {diff,show}` above (even with `$PQT_TXT_OPTS`) aren't much help inferring what happened to `test.parquet` in [`9a9370c`]:
 
@@ -597,7 +659,7 @@ test.parquet (c621f0e..14a2491)
 19,20d19
 <   OPTIONAL BYTE_ARRAY Start Region (STRING);
 <   OPTIONAL BYTE_ARRAY End Region (STRING);
-23,36c22,28
+24,37c23,29
 <   "Ride ID": "47D7696609CD77E4",
 <   "Rideable Type": "classic_bike",
 <   "Start Time": "2024-10-31T03:53:24.765",
@@ -620,7 +682,7 @@ test.parquet (c621f0e..14a2491)
 >   "End Station Name": "2 Ave & E 96 St",
 >   "Ride ID": "03F9A0B025966750",
 >   "Rideable Type": "electric_bike",
-38c30,36
+39c31,37
 <   "End Region": "NYC"
 ---
 >   "Start Station ID": "7842.16",
@@ -630,7 +692,7 @@ test.parquet (c621f0e..14a2491)
 >   "Start Time": "2024-10-31T17:24:06.707",
 >   "Stop Time": "2024-11-01T03:01:00.430",
 >   "User Type": "Customer"
-41,54c39,45
+42,55c40,46
 <   "Ride ID": "ADE40852FD10329E",
 <   "Rideable Type": "classic_bike",
 <   "Start Time": "2024-10-31T05:18:29.219",
@@ -653,7 +715,7 @@ test.parquet (c621f0e..14a2491)
 >   "End Station Name": "E 161 St & Park Ave",
 >   "Ride ID": "08D7AFEB94079985",
 >   "Rideable Type": "electric_bike",
-56c47,53
+57c48,54
 <   "End Region": "NYC"
 ---
 >   "Start Station ID": "8179.03",
@@ -663,6 +725,70 @@ test.parquet (c621f0e..14a2491)
 >   "Start Time": "2024-10-31T16:42:08.174",
 >   "Stop Time": "2024-11-01T00:36:34.579",
 >   "User Type": "Subscriber"
+61c58,63
+<   "Ride ID": "BE959FD40D19CB5B",
+---
+>   "End Region": "NYC",
+>   "End Station ID": "4724.03",
+>   "End Station Latitude": 40.69610226,
+>   "End Station Longitude": -73.96751037,
+>   "End Station Name": "Washington Ave & Park Ave",
+>   "Ride ID": "BFCF7F13556941D9",
+63,74d64
+<   "Start Time": "2024-10-31T18:41:57.297",
+<   "Stop Time": "2024-11-01T03:28:43.499",
+<   "Start Station Name": "W 34 St & 11 Ave",
+<   "Start Station ID": "6578.01",
+<   "End Station Name": "Broadway & E 21 St",
+<   "End Station ID": "6098.1",
+<   "Start Station Latitude": 40.75594159,
+<   "Start Station Longitude": -74.0021163,
+<   "End Station Latitude": 40.739888408589955,
+<   "End Station Longitude": -73.98958593606949,
+<   "Gender": "U",
+<   "User Type": "Customer",
+76c66,72
+<   "End Region": "NYC"
+---
+>   "Start Station ID": "4732.08",
+>   "Start Station Latitude": 40.697787,
+>   "Start Station Longitude": -73.973736,
+>   "Start Station Name": "Carlton Ave & Flushing Ave",
+>   "Start Time": "2024-10-31T17:11:11.877",
+>   "Stop Time": "2024-11-01T18:05:01.028",
+>   "User Type": "Subscriber"
+79c75,80
+<   "Ride ID": "A1EB017D7CB1A09F",
+---
+>   "End Region": "NYC",
+>   "End Station ID": "4455.1",
+>   "End Station Latitude": 40.68825516598005,
+>   "End Station Longitude": -73.99545192718506,
+>   "End Station Name": "Congress St & Clinton St",
+>   "Ride ID": "EE3F608FF69C87B9",
+81,92d81
+<   "Start Time": "2024-10-31T18:46:42.479",
+<   "Stop Time": "2024-11-01T17:28:56.677",
+<   "Start Station Name": "W 34 St & 11 Ave",
+<   "Start Station ID": "6578.01",
+<   "End Station Name": "E 13 St & Ave A",
+<   "End Station ID": "5779.09",
+<   "Start Station Latitude": 40.75594159,
+<   "Start Station Longitude": -74.0021163,
+<   "End Station Latitude": 40.72966729392978,
+<   "End Station Longitude": -73.98067966103554,
+<   "Gender": "U",
+<   "User Type": "Subscriber",
+94c83,89
+<   "End Region": "NYC"
+---
+>   "Start Station ID": "4249.01",
+>   "Start Station Latitude": 40.68197,
+>   "Start Station Longitude": -73.98034,
+>   "Start Station Name": "St Marks Pl & 4 Ave",
+>   "Start Time": "2024-10-31T15:54:09.615",
+>   "Stop Time": "2024-11-01T02:38:14.161",
+>   "User Type": "Customer"
 
 ```
 </details>
@@ -796,8 +922,8 @@ It's a contrived example, but based on real comparisons I did on Parquet files i
 [`test.py`]: https://github.com/ryan-williams/parquet-helpers/tree/test/test.py
 [`test.parquet`]: https://github.com/ryan-williams/parquet-helpers/tree/test/test.parquet
 
-[`qmdx`]: https://pypi.org/project/qmdx/
-[`git-diff-x`]: https://github.com/runsascoded/qmdx?tab=readme-ov-file#git-diff-x
+[`dffs`]: https://pypi.org/project/dffs/
+[`git-diff-x`]: https://github.com/runsascoded/dffs?tab=readme-ov-file#git-diff-x
 [`dxr`]: https://github.com/ryan-williams/git-helpers/blob/5f27c2e4e88e3e14ede21483c998bdbe2cfccc6f/diff/.gitconfig#L69
 [ctbk.dev]: https://github.com/neighbor-ryan/ctbk.dev
 [ctbk CSV example]: https://github.com/runsascoded/dvc-utils?tab=readme-ov-file#csv-gz

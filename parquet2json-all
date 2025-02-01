@@ -8,9 +8,9 @@ err() {
   echo "$@" >&2
 }
 usage() {
-  err "Usage: $(basename "$0") [-n <n_rows=10>] [-o <offset>] [-s] <path>"
-  err "  -n: number of rows to display (negative ⇒ all rows)"
-  err "  -o: offset (skip) rows; negative ⇒ last rows"
+  err "Usage: $(basename "$0") [-n <head_rows=10>] [-o <offset_args>] [-s] <path>"
+  err '  -n: number of first and last rows to display; comma-separate to distinguish head/tail (e.g. default `-n3` is equivalent to `-n3,3`, which displays 3 rows from start and end). `,` prints all rows (useful in conjunction with an `-o` offset).'
+  err "  -o: skip this number of rows; negative ⇒ skip to last N rows"
   err "  -s: compact mode (one object per line)"
   err
   err 'Opts passed via $PQT_TXT_OPTS will override those passed via CLI (to allow for configuring `git show`):'
@@ -22,16 +22,34 @@ usage() {
   exit 127
 }
 
-n_rows=10
-offset=()
+head_rows=3
+tail_rows=3
+print_all=
+offset_args=()
+offset_rows=0
 print_cmd="jq"
 parse() {
   OPTIND=1
   while getopts "hn:o:s" opt; do
     case $opt in
       h) usage ;;
-      n) n_rows="$OPTARG" ;;
-      o) offset=(-o"$OPTARG") ;;
+      n)
+        n_rows="$OPTARG"
+        if [ "$n_rows" = , ]; then
+          head_rows=0
+          tail_rows=0
+          print_all=1
+        elif [[ "$n_rows" == *,* ]]; then
+          IFS=',' read -r head_rows tail_rows <<< "$n_rows"
+        else
+          head_rows="$n_rows"
+          tail_rows="$n_rows"
+        fi
+        ;;
+      o)
+        offset_args=(-o"$OPTARG")
+        offset_rows="$OPTARG"
+        ;;
       s) print_cmd="cat" ;;
       *) usage ;;
     esac
@@ -48,10 +66,18 @@ if [ -n "$OPTS" ]; then
   parse "${opts[@]}"
 fi
 
-if [ "$n_rows" -lt 0 ]; then
-  rows=()
-else
-  rows=(-l "$n_rows")
+if [ -z "$head_rows" ]; then
+  head_rows=0
+elif [ "$head_rows" -lt 0 ]; then
+  if [ -n "$tail_rows" ]; then
+    err "Can't specify both negative head and positive tail rows" >&2
+    exit 1
+  fi
+  head_rows=0
+  tail_rows=$((0 - head_rows))
+fi
+if [ -z "$tail_rows" ]; then
+  tail_rows=0
 fi
 
 if [ $# -eq 0 ] || { [ $# -eq 1 ] && [ "$1" == "-" ]; }; then
@@ -69,8 +95,30 @@ else
   usage
 fi
 
+rowcount="$(parquet-2-json.sh rowcount "$path")"
+
 echo "MD5: $(md5sum "$path" | cut -d' ' -f1)"
 echo "$(stat -c %s "$path") bytes"
-echo "$(parquet-2-json.sh rowcount "$path") rows"
+echo "$rowcount rows"
 parquet-2-json.sh schema "$path"
-parquet-2-json.sh cat "${rows[@]}" "${offset[@]}" "$path" | "$print_cmd"
+show_rows="$((head_rows + tail_rows + offset_rows))"
+if [ -n "$print_all" ] || [ "$show_rows" -ge "$rowcount" ]; then
+    parquet-2-json.sh cat "${offset_args[@]}" "$path" | "$print_cmd"
+else
+  if [ "$head_rows" -gt 0 ]; then
+    if [ "$head_rows" -eq 1 ]; then
+      echo "First row:"
+    else
+      echo "First $head_rows rows:"
+    fi
+    parquet-2-json.sh cat -l "$head_rows" "${offset_args[@]}" "$path" | "$print_cmd"
+  fi
+  if [ "$tail_rows" -gt 0 ]; then
+    if [ "$tail_rows" -eq 1 ]; then
+      echo "Last row:"
+    else
+      echo "Last $tail_rows rows:"
+    fi
+    parquet-2-json.sh cat "-o-$tail_rows" "$path" | "$print_cmd"
+  fi
+fi
