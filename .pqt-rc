@@ -61,12 +61,12 @@ export -f parquet2json_head_pretty
 defn p2jhp parquet2json_head_pretty
 defn pqhp parquet2json_head_pretty
 
-parquet2jon_sort() {
+parquet2json_sort() {
     parquet-2-json.sh cat "$@" | sort
 }
-export -f parquet2jon_sort
-defn p2jt parquet2jon_sort
-defn pqt parquet2jon_sort
+export -f parquet2json_sort
+defn p2jt parquet2json_sort
+defn pqt parquet2json_sort
 
 parquet_pretty_print_n() {
     if [ $# -eq 0 ] || [ $# -gt 2 ]; then
