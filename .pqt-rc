@@ -68,6 +68,29 @@ export -f parquet2json_sort
 defn p2jt parquet2json_sort
 defn pqt parquet2json_sort
 
+parquet2json_col() {
+  if [ $# -eq 0 ]; then
+    echo "Usage: ${FUNCNAME[0]} <col> [args...]" >&2
+    return 1
+  fi
+  parquet-2-json.sh cat -c "$@" | jq -r ".[\"$1\"]"
+}
+export -f parquet2json_col
+defn pqk parquet2json_col
+
+parquet2json_col_n() {
+  if [ $# -lt 2 ]; then
+    echo "Usage: ${FUNCNAME[0]} <col> <n> [args...]" >&2
+    return 1
+  fi
+  local col="$1"; shift
+  local n="$1"; shift
+  parquet2json_col "$col" -l "$n" "$@"
+}
+export -f parquet2json_col_n
+defn pqkl parquet2json_col_n
+defn pqkn parquet2json_col_n
+
 parquet_pretty_print_n() {
     if [ $# -eq 0 ] || [ $# -gt 2 ]; then
         echo "Usage: ${FUNCNAME[0]} <n> [path]" >&2
