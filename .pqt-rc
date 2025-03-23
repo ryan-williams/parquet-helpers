@@ -37,6 +37,19 @@ defn p2jh parquet-2-json.sh cat -l 10
 defn pqh parquet-2-json.sh cat -l 10
 defn p2jhn parquet-2-json.sh cat -l
 defn pqhn parquet-2-json.sh cat -l
+defn pqo parquet2json cat -o
+
+parquet2json_tail() {
+  local n
+  if [ $# -eq 0 ]; then
+    n=10
+  else
+    n="$1"; shift
+  fi
+  parquet-2-json.sh cat -o -$n "$@"
+}
+export -f parquet2json_tail
+defn pqtl parquet2json_tail
 
 defn pqm parquet-metadata.py
 
