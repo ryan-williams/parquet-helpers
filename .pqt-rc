@@ -73,6 +73,8 @@ parquet2json_head_pretty() {
 export -f parquet2json_head_pretty
 defn p2jhp parquet2json_head_pretty
 defn pqhp parquet2json_head_pretty
+defn pq1p parquet2json_head_pretty 1
+defn pq10 parquet2json_head_pretty 10
 
 parquet2json_sort() {
     parquet-2-json.sh cat "$@" | sort
