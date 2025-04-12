@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import json
 from datetime import datetime
+from io import BytesIO
 from json import JSONEncoder
 from sys import stdin, stdout
 
@@ -22,7 +23,7 @@ def main(path: str | None):
     if path:
         meta = pq.read_metadata(path)
     else:
-        pf = pq.ParquetFile(stdin.buffer)
+        pf = pq.ParquetFile(BytesIO(stdin.buffer.read()))
         meta = pf.metadata
 
     json.dump(meta.to_dict(), stdout, indent=2, cls=DateTimeEncoder)
