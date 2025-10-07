@@ -1,131 +1,143 @@
-#!/usr/bin/env bash
+#!/usr/bin/env -S uv run --quiet --script
+# /// script
+# dependencies = [
+#   "click",
+# ]
+# ///
 
-set -eo pipefail
+from click import argument, command, option
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import partial
+from subprocess import run, PIPE
+from sys import stderr, exit
+import re
 
-args=("$@")
+err = partial(print, file=stderr)
 
-err() {
-  echo "$@" >&2
-}
-usage() {
-  err "Usage: $(basename "$0") [-n <head_rows=10>] [-o <offset_args>] [-s] <path>"
-  err '  -n: number of first and last rows to display; comma-separate to distinguish head/tail (e.g. default `-n3` is equivalent to `-n3,3`, which displays 3 rows from start and end). `,` prints all rows (useful in conjunction with an `-o` offset).'
-  err "  -o: skip this number of rows; negative ⇒ skip to last N rows"
-  err "  -s: compact mode (one object per line)"
-  err
-  err 'Opts passed via $PQT_TXT_OPTS will override those passed via CLI (to allow for configuring `git show`):'
-  err
-  err 'The "opts var" itself ("PQT_TXT_OPTS" by default) can also be customized, by setting `$PQT_TXT_OPTS_VAR`, e.g.:'
-  err
-  err '  export PQT_TXT_OPTS_VAR=PQT  # This can be done once, e.g. in your .bashrc'
-  err '  PQT="-sn3" git show          # Shorter var name can then be used to configure diffs rendered by `git show` (in this case: compact output, 3 rows)'
-  exit 127
-}
+def parquet2json(*args):
+    """Run parquet-2-json.sh and return stdout"""
+    result = run(['parquet-2-json.sh', *map(str, args)], capture_output=True, text=True)
+    if result.returncode != 0:
+        err(f"parquet-2-json.sh failed: {result.stderr}")
+        exit(result.returncode)
+    return result.stdout.rstrip()
 
-head_rows=3
-tail_rows=3
-print_all=
-offset_args=()
-offset_rows=0
-print_cmd="jq"
-parse() {
-  OPTIND=1
-  while getopts "hn:o:s" opt; do
-    case $opt in
-      h) usage ;;
-      n)
-        n_rows="$OPTARG"
-        if [ "$n_rows" = , ]; then
-          head_rows=0
-          tail_rows=0
-          print_all=1
-        elif [[ "$n_rows" == *,* ]]; then
-          IFS=',' read -r head_rows tail_rows <<< "$n_rows"
-        else
-          head_rows="$n_rows"
-          tail_rows="$n_rows"
-        fi
-        ;;
-      o)
-        offset_args=(-o"$OPTARG")
-        offset_rows="$OPTARG"
-        ;;
-      s) print_cmd="cat" ;;
-      *) usage ;;
-    esac
-  done
-}
+def get_file_info(path):
+    """Get MD5 and size of file (S3 or local)"""
+    if path.startswith('s3://'):
+        # Run both AWS commands concurrently
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            md5_future = executor.submit(
+                lambda: run(['bash', '-c', f'aws s3 cp "{path}" - | md5sum | cut -d" " -f1'],
+                           capture_output=True, text=True).stdout.strip()
+            )
+            size_future = executor.submit(
+                lambda: run(['bash', '-c', f'aws s3 ls "{path}" | awk \'{{print $3}}\''],
+                           capture_output=True, text=True).stdout.strip()
+            )
+            md5 = md5_future.result()
+            size = size_future.result()
+    else:
+        result = run(['bash', '-c', f'md5sum "{path}" | cut -d" " -f1'], capture_output=True, text=True)
+        md5 = result.stdout.strip()
+        result = run(['bash', '-c', f'stat -c %s "{path}"'], capture_output=True, text=True)
+        size = result.stdout.strip()
+    return md5, size
 
-parse "$@"
-shift $((OPTIND-1))
+@command()
+@option('-n', '--num-rows', default='3', help='Number of first and last rows to display; comma-separate to distinguish head/tail (e.g. default `-n3` is equivalent to `-n3,3`). `,` prints all rows.')
+@option('-o', '--offset', type=int, default=0, help='Skip this number of rows; negative ⇒ skip to last N rows')
+@option('-s', '--compact', is_flag=True, help='Compact mode (one object per line)')
+@argument('path')
+def main(num_rows, offset, compact, path):
+    """Display parquet file metadata and sample rows"""
 
-OPTS_VAR="${PQT_TXT_OPTS_VAR:-PQT_TXT_OPTS}"
-OPTS="${!OPTS_VAR}"
-if [ -n "$OPTS" ]; then
-  IFS=' ' read -ra opts <<< "$OPTS"
-  parse "${opts[@]}"
-fi
+    # Parse num_rows
+    if num_rows == ',':
+        head_rows = 0
+        tail_rows = 0
+        print_all = True
+    elif ',' in num_rows:
+        head_str, tail_str = num_rows.split(',', 1)
+        head_rows = int(head_str) if head_str else 0
+        tail_rows = int(tail_str) if tail_str else 0
+        print_all = False
+    else:
+        n = int(num_rows)
+        head_rows = tail_rows = n
+        print_all = False
 
-if [ -z "$head_rows" ]; then
-  head_rows=0
-elif [ "$head_rows" -lt 0 ]; then
-  if [ -n "$tail_rows" ]; then
-    err "Can't specify both negative head and positive tail rows" >&2
-    exit 1
-  fi
-  head_rows=0
-  tail_rows=$((0 - head_rows))
-fi
-if [ -z "$tail_rows" ]; then
-  tail_rows=0
-fi
+    # Handle stdin
+    if path == '-' or not path:
+        import tempfile
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            import shutil
+            shutil.copyfileobj(__import__('sys').stdin.buffer, tmp)
+            path = tmp.name
 
-if [ $# -eq 0 ] || { [ $# -eq 1 ] && [ "$1" == "-" ]; }; then
-  path="$(mktemp)"
-  trap 'rm -f "$path"' EXIT
-  cat > "$path"
-elif [ $# -eq 1 ]; then
-  path="$1"
-  if ! [ -e "$path" ] && ! [[ $path =~ ^s3:// ]]; then
-    echo "File not found: $path" >&2
-    exit 127
-  fi
-else
-  echo "Too many arguments: $#" >&2
-  usage
-fi
+    # Check file exists
+    if not path.startswith('s3://'):
+        from os.path import exists
+        if not exists(path):
+            err(f"File not found: {path}")
+            exit(127)
 
-rowcount="$(parquet-2-json.sh rowcount "$path")"
+    print_cmd = 'cat' if compact else 'jq'
 
-if [[ $path =~ ^s3:// ]]; then
-  md5="$(aws s3 cp "$path" - | md5sum | cut -d' ' -f1)"
-  size="$(aws s3 ls "$path" | awk '{print $3}')"
-else
-  md5="$(md5sum "$path" | cut -d' ' -f1)"
-  size="$(stat -c %s "$path")"
-fi
-echo "MD5: $md5"
-echo "$size bytes"
-echo "$rowcount rows"
-parquet-2-json.sh schema "$path"
-show_rows="$((head_rows + tail_rows + offset_rows))"
-if [ -n "$print_all" ] || [ "$show_rows" -ge "$rowcount" ]; then
-    parquet-2-json.sh cat "${offset_args[@]}" "$path" | "$print_cmd"
-else
-  if [ "$head_rows" -gt 0 ]; then
-    if [ "$head_rows" -eq 1 ]; then
-      echo "First row:"
-    else
-      echo "First $head_rows rows:"
-    fi
-    parquet-2-json.sh cat -l "$head_rows" "${offset_args[@]}" "$path" | "$print_cmd"
-  fi
-  if [ "$tail_rows" -gt 0 ]; then
-    if [ "$tail_rows" -eq 1 ]; then
-      echo "Last row:"
-    else
-      echo "Last $tail_rows rows:"
-    fi
-    parquet-2-json.sh cat "-o-$tail_rows" "$path" | "$print_cmd"
-  fi
-fi
+    # Run metadata queries concurrently
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        rowcount_future = executor.submit(parquet2json, 'rowcount', path)
+        schema_future = executor.submit(parquet2json, 'schema', path)
+        file_info_future = executor.submit(get_file_info, path)
+
+        rowcount = int(rowcount_future.result())
+        schema = schema_future.result()
+        md5, size = file_info_future.result()
+
+    print(f"MD5: {md5}")
+    print(f"{size} bytes")
+    print(f"{rowcount} rows")
+    print(schema)
+
+    offset_args = [f'-o{offset}'] if offset else []
+    show_rows = head_rows + tail_rows + abs(offset)
+
+    if print_all or show_rows >= rowcount:
+        # Single query for all rows
+        output = parquet2json('cat', *offset_args, path)
+        if print_cmd == 'jq':
+            result = run(['jq'], input=output, capture_output=True, text=True)
+            print(result.stdout, end='')
+        else:
+            print(output)
+    else:
+        # Run head and tail queries concurrently
+        futures = {}
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            if head_rows > 0:
+                futures['head'] = executor.submit(parquet2json, 'cat', '-l', head_rows, *offset_args, path)
+            if tail_rows > 0:
+                futures['tail'] = executor.submit(parquet2json, 'cat', f'-o-{tail_rows}', path)
+
+            if 'head' in futures:
+                label = "First row:" if head_rows == 1 else f"First {head_rows} rows:"
+                print(label)
+                output = futures['head'].result()
+                if print_cmd == 'jq':
+                    result = run(['jq'], input=output, capture_output=True, text=True)
+                    print(result.stdout, end='')
+                else:
+                    print(output)
+
+            if 'tail' in futures:
+                label = "Last row:" if tail_rows == 1 else f"Last {tail_rows} rows:"
+                print(label)
+                output = futures['tail'].result()
+                if print_cmd == 'jq':
+                    result = run(['jq'], input=output, capture_output=True, text=True)
+                    print(result.stdout, end='')
+                else:
+                    print(output)
+
+if __name__ == '__main__':
+    main()
