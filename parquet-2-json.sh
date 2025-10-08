@@ -55,5 +55,13 @@ if [ $# -eq 0 ] || { [ $# -eq 1 ] && [ "$1" == "-" ]; }; then
 elif [ $# -eq 1 ]; then
   parquet2json "$1" "${opts[@]}"
 else
-  usage
+  # Multiple paths: only supported for rowcount and schema subcommands
+  if [ "$subcmd" == "rowcount" ] || [ "$subcmd" == "schema" ]; then
+    for path in "$@"; do
+      result="$(parquet2json "$path" "${opts[@]}")"
+      echo "$result	$path"
+    done
+  else
+    usage
+  fi
 fi
