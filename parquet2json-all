@@ -2,53 +2,78 @@
 # /// script
 # dependencies = [
 #   "click",
+#   "utz",
 # ]
 # ///
 
-from click import argument, command, option
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from functools import partial
-from subprocess import run, PIPE
-from sys import stderr, exit
-import re
+from concurrent.futures import ThreadPoolExecutor
+from os import environ
+from os.path import exists
+from subprocess import PIPE, run
+from sys import exit
+from utz import err
+from utz.cli import arg, cmd, flag, opt
+from utz.proc import text
 
-err = partial(print, file=stderr)
 
 def parquet2json(*args):
     """Run parquet-2-json.sh and return stdout"""
-    result = run(['parquet-2-json.sh', *map(str, args)], capture_output=True, text=True)
-    if result.returncode != 0:
-        err(f"parquet-2-json.sh failed: {result.stderr}")
-        exit(result.returncode)
-    return result.stdout.rstrip()
+    return text('parquet-2-json.sh', *map(str, args), log=None).rstrip()
+
 
 def get_file_info(path):
     """Get MD5 and size of file (S3 or local)"""
     if path.startswith('s3://'):
-        # Run both AWS commands concurrently
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            md5_future = executor.submit(
-                lambda: run(['bash', '-c', f'aws s3 cp "{path}" - | tee >(wc -c >&2) | md5sum | cut -d" " -f1'],
-                           stdout=PIPE, stderr=PIPE, text=True)
-            )
-
-            result = md5_future.result()
-            md5 = result.stdout.strip()
-            size = result.stderr.strip()
-    else:
-        result = run(['bash', '-c', f'md5sum "{path}" | cut -d" " -f1'], capture_output=True, text=True)
+        # Use single aws s3 cp with tee to compute both MD5 and size from same stream
+        result = run(
+            ['bash', '-c', f'aws s3 cp "{path}" - | tee >(wc -c >&2) | md5sum | cut -d" " -f1'],
+            stdout=PIPE, stderr=PIPE, text=True
+        )
         md5 = result.stdout.strip()
-        result = run(['bash', '-c', f'stat -c %s "{path}"'], capture_output=True, text=True)
-        size = result.stdout.strip()
+        size = result.stderr.strip()
+    else:
+        md5 = text('bash', '-c', f'md5sum "{path}" | cut -d" " -f1', log=None).strip()
+        size = text('bash', '-c', f'stat -c %s "{path}"', log=None).strip()
     return md5, size
 
-@command()
-@option('-n', '--num-rows', default='3', help='Number of first and last rows to display; comma-separate to distinguish head/tail (e.g. default `-n3` is equivalent to `-n3,3`). `,` prints all rows.')
-@option('-o', '--offset', type=int, default=0, help='Skip this number of rows; negative ⇒ skip to last N rows')
-@option('-s', '--compact', is_flag=True, help='Compact mode (one object per line)')
-@argument('path', required=False, default='-')
+
+@cmd
+@opt('-n', '--num-rows', default='3', help='Number of first and last rows to display; comma-separate to distinguish head/tail (e.g. default `-n3` is equivalent to `-n3,3`). `,` prints all rows. Env var $PQT_TXT_OPTS (or ${PQT_TXT_OPTS_VAR}) overrides CLI options.')
+@opt('-o', '--offset', type=int, default=0, help='Skip this number of rows; negative ⇒ skip to last N rows')
+@flag('-s', '--compact', help='Compact mode (one object per line)')
+@arg('path', required=False, default='-')
 def main(num_rows, offset, compact, path):
     """Display parquet file metadata and sample rows"""
+
+    # Handle env var options (override CLI options)
+    opts_var = environ.get('PQT_TXT_OPTS_VAR', 'PQT_TXT_OPTS')
+    opts_str = environ.get(opts_var, '').strip()
+    if opts_str:
+        import shlex
+        env_opts = shlex.split(opts_str)
+        # Parse env options to override CLI values
+        i = 0
+        while i < len(env_opts):
+            opt = env_opts[i]
+            if opt.startswith('-n'):
+                if opt == '-n' and i + 1 < len(env_opts):
+                    num_rows = env_opts[i + 1]
+                    i += 2
+                else:
+                    num_rows = opt[2:]  # -n3 format
+                    i += 1
+            elif opt.startswith('-o'):
+                if opt == '-o' and i + 1 < len(env_opts):
+                    offset = int(env_opts[i + 1])
+                    i += 2
+                else:
+                    offset = int(opt[2:])  # -o5 format
+                    i += 1
+            elif opt == '-s' or opt == '--compact':
+                compact = True
+                i += 1
+            else:
+                i += 1
 
     # Parse num_rows
     if num_rows == ',':
@@ -68,14 +93,14 @@ def main(num_rows, offset, compact, path):
     # Handle stdin
     if path == '-' or not path:
         import tempfile
+        import shutil
+        import sys
         with tempfile.NamedTemporaryFile(delete=False) as tmp:
-            import shutil
-            shutil.copyfileobj(__import__('sys').stdin.buffer, tmp)
+            shutil.copyfileobj(sys.stdin.buffer, tmp)
             path = tmp.name
 
     # Check file exists
     if not path.startswith('s3://'):
-        from os.path import exists
         if not exists(path):
             err(f"File not found: {path}")
             exit(127)
@@ -136,6 +161,7 @@ def main(num_rows, offset, compact, path):
                     print(result.stdout, end='')
                 else:
                     print(output)
+
 
 if __name__ == '__main__':
     main()
