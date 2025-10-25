@@ -51,6 +51,27 @@ parquet2json_tail() {
 export -f parquet2json_tail
 defn pqtl parquet2json_tail
 
+parquet2json_slice() {
+  if [ $# -eq 0 ]; then
+    echo "Usage: ${FUNCNAME[0]} <offset>[+<limit>] [path]" >&2
+    echo "  Examples:" >&2
+    echo "    ${FUNCNAME[0]} 10      file.parquet  # 10 rows starting at offset 10" >&2
+    echo "    ${FUNCNAME[0]} 10+1    file.parquet  # Just row at offset 10" >&2
+    echo "    ${FUNCNAME[0]} 5+3     file.parquet  # 3 rows starting at offset 5" >&2
+    return 1
+  fi
+  local slice="$1"; shift
+  if [[ "$slice" == *+* ]]; then
+    IFS='+' read -r offset limit <<< "$slice"
+  else
+    offset="$slice"
+    limit=10
+  fi
+  parquet-2-json.sh cat -o "$offset" -l "$limit" "$@"
+}
+export -f parquet2json_slice
+defn pqsl parquet2json_slice
+
 defn pqm parquet-metadata.py
 
 parquet2json_jq() {
