@@ -58,6 +58,8 @@ parquet2json_slice() {
     echo "    ${FUNCNAME[0]} 10      file.parquet  # 10 rows starting at offset 10" >&2
     echo "    ${FUNCNAME[0]} 10+1    file.parquet  # Just row at offset 10" >&2
     echo "    ${FUNCNAME[0]} 5+3     file.parquet  # 3 rows starting at offset 5" >&2
+    echo "    ${FUNCNAME[0]} 2e6+e6  file.parquet  # 1M rows starting at offset 2M" >&2
+    echo "    ${FUNCNAME[0]} e6+e3   file.parquet  # 1K rows starting at offset 1M" >&2
     return 1
   fi
   local slice="$1"; shift
@@ -67,6 +69,12 @@ parquet2json_slice() {
     offset="$slice"
     limit=10
   fi
+  # Normalize scientific notation: "e6" -> "1e6"
+  [[ "$offset" =~ ^e ]] && offset="1$offset"
+  [[ "$limit" =~ ^e ]] && limit="1$limit"
+  # Convert scientific notation to integers
+  offset=$(python3 -c "print(int(float('$offset')))")
+  limit=$(python3 -c "print(int(float('$limit')))")
   parquet-2-json.sh cat -o "$offset" -l "$limit" "$@"
 }
 export -f parquet2json_slice
