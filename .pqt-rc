@@ -24,7 +24,21 @@ defn p2jcc parquet-2-json.sh cat -c
 defn pqcc parquet-2-json.sh cat -c
 defn p2jcl parquet-2-json.sh cat -l
 defn pqcl parquet-2-json.sh cat -l
-defn pql parquet-2-json.sh cat -l
+
+parquet2json_limit() {
+  if [ $# -eq 0 ]; then
+    echo "Usage: ${FUNCNAME[0]} <limit> [path]" >&2
+    return 1
+  fi
+  local limit="$1"; shift
+  # Normalize scientific notation: "e6" -> "1e6"
+  [[ "$limit" =~ ^e ]] && limit="1$limit"
+  # Convert scientific notation to integers
+  limit=$(python3 -c "print(int(float('$limit')))")
+  parquet-2-json.sh cat -l "$limit" "$@"
+}
+export -f parquet2json_limit
+defn pql parquet2json_limit
 defn p2jcl1 parquet-2-json.sh cat -l 1
 defn pqcl1 parquet-2-json.sh cat -l 1
 defn pq1 parquet-2-json.sh cat -l 1
@@ -35,8 +49,8 @@ defn p2jcn parquet-2-json.sh cat -l
 defn pqcn parquet-2-json.sh cat -l
 defn p2jh parquet-2-json.sh cat -l 10
 defn pqh parquet-2-json.sh cat -l 10
-defn p2jhn parquet-2-json.sh cat -l
-defn pqhn parquet-2-json.sh cat -l
+defn p2jhn parquet2json_limit
+defn pqhn parquet2json_limit
 defn pqo parquet2json cat -o
 
 parquet2json_tail() {
@@ -46,6 +60,10 @@ parquet2json_tail() {
   else
     n="$1"; shift
   fi
+  # Normalize scientific notation: "e6" -> "1e6"
+  [[ "$n" =~ ^e ]] && n="1$n"
+  # Convert scientific notation to integers
+  n=$(python3 -c "print(int(float('$n')))")
   parquet-2-json.sh cat -o -$n "$@"
 }
 export -f parquet2json_tail
