@@ -1,0 +1,60 @@
+#!/usr/bin/env -S uv run -q --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["click"]
+# ///
+"""Extract and output the raw footer bytes from a Parquet file.
+
+The footer is the Thrift-serialized FileMetaData at the end of the file,
+which includes schema, row group info, key-value metadata (e.g. pandas
+version), and more.
+
+Usage:
+    pqf file.parquet              # Output footer bytes to stdout
+    pqf file.parquet | hexdump -C # View as hex
+    pqf a.parquet | md5           # Compare footers between files
+"""
+import struct
+import sys
+
+from click import argument, command, option
+
+
+@command
+@option('-l', '--length', is_flag=True, help='Print footer length only')
+@argument('path', required=False)
+def main(path: str | None, length: bool):
+    """Extract raw Parquet footer bytes."""
+    if path:
+        with open(path, 'rb') as f:
+            # Seek to last 8 bytes: [4-byte footer_length][4-byte "PAR1"]
+            f.seek(-8, 2)
+            trailer = f.read(8)
+    else:
+        data = sys.stdin.buffer.read()
+        trailer = data[-8:]
+
+    footer_len = struct.unpack('<I', trailer[:4])[0]
+    magic = trailer[4:]
+
+    if magic != b'PAR1':
+        print(f"Error: Invalid Parquet file (magic={magic!r}, expected b'PAR1')", file=sys.stderr)
+        sys.exit(1)
+
+    if length:
+        print(footer_len)
+        return
+
+    if path:
+        with open(path, 'rb') as f:
+            # Footer starts at: end - 8 - footer_len
+            f.seek(-8 - footer_len, 2)
+            footer = f.read(footer_len)
+    else:
+        footer = data[-8 - footer_len:-8]
+
+    sys.stdout.buffer.write(footer)
+
+
+if __name__ == '__main__':
+    main()

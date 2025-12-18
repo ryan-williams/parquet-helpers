@@ -99,6 +99,7 @@ export -f parquet2json_slice
 defn pqsl parquet2json_slice
 
 defn pqm parquet-metadata.py
+defn pqf parquet-footer
 
 parquet2json_jq() {
     if [ $# -eq 0 ]; then
