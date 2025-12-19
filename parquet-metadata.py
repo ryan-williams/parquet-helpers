@@ -1,12 +1,20 @@
-#!/usr/bin/env python
+#!/usr/bin/env -S uv run -q --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["click", "pyarrow"]
+# ///
 import json
+import signal
 from datetime import datetime
 from io import BytesIO
 from json import JSONEncoder
 from sys import stdin, stdout
 
-from click import command, argument
+from click import argument, command
 from pyarrow import parquet as pq
+
+# Restore default SIGPIPE handling (exit 141) instead of Python's BrokenPipeError (exit 1)
+signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 
 class DateTimeEncoder(JSONEncoder):

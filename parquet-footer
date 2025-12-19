@@ -14,10 +14,14 @@ Usage:
     pqf file.parquet | hexdump -C # View as hex
     pqf a.parquet | md5           # Compare footers between files
 """
+import signal
 import struct
 import sys
 
 from click import argument, command, option
+
+# Restore default SIGPIPE handling (exit 141) instead of Python's BrokenPipeError (exit 1)
+signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 
 @command
