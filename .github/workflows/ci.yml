@@ -16,7 +16,7 @@ jobs:
     - uses: Swatinem/rust-cache@v2
     - run: cargo install parquet2json
     - uses: astral-sh/setup-uv@v5
-    - run: pip install 'bmdf>=0.4.0' 'dffs>=0.0.5'
+    - run: pip install 'mdcmd>=0.7.4' 'dffs>=0.1.1'
     - name: Use git-diff-parquet.sh to diff .parquet files
       run: |
         echo "*.parquet diff=parquet" > .gitattributes

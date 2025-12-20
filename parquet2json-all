@@ -37,9 +37,13 @@ def get_file_info(path):
     return md5, size
 
 
+DEFAULT_NUM_ROWS = 3
+DEFAULT_OFFSET = 0
+
+
 @cmd(context_settings=dict(help_option_names=['-h', '--help']))
-@opt('-n', '--num-rows', default='3', help='Number of first and last rows to display; comma-separate to distinguish head/tail (e.g. default `-n3` is equivalent to `-n3,3`). `,` prints all rows. Env var $PQT_TXT_OPTS (or ${PQT_TXT_OPTS_VAR}) overrides CLI options.')
-@opt('-o', '--offset', type=int, default=0, help='Skip this number of rows; negative ⇒ skip to last N rows')
+@opt('-n', '--num-rows', help=f'Number of first and last rows to display (default: {DEFAULT_NUM_ROWS}); comma-separate to distinguish head/tail (e.g. `-n3` is equivalent to `-n3,3`). `,` prints all rows. Env var $PQT_TXT_OPTS (or ${{PQT_TXT_OPTS_VAR}}) overrides CLI options.')
+@opt('-o', '--offset', type=int, help=f'Skip this number of rows (default: {DEFAULT_OFFSET}); negative ⇒ skip to last N rows')
 @flag('-s', '--compact', help='Compact mode (one object per line)')
 @arg('path', required=False, default='-')
 def main(num_rows, offset, compact, path):
@@ -50,30 +54,23 @@ def main(num_rows, offset, compact, path):
     opts_str = environ.get(opts_var, '').strip()
     if opts_str:
         import shlex
+        from click import Context
         env_opts = shlex.split(opts_str)
-        # Parse env options to override CLI values
-        i = 0
-        while i < len(env_opts):
-            opt = env_opts[i]
-            if opt.startswith('-n'):
-                if opt == '-n' and i + 1 < len(env_opts):
-                    num_rows = env_opts[i + 1]
-                    i += 2
-                else:
-                    num_rows = opt[2:]  # -n3 format
-                    i += 1
-            elif opt.startswith('-o'):
-                if opt == '-o' and i + 1 < len(env_opts):
-                    offset = int(env_opts[i + 1])
-                    i += 2
-                else:
-                    offset = int(opt[2:])  # -o5 format
-                    i += 1
-            elif opt == '-s' or opt == '--compact':
-                compact = True
-                i += 1
-            else:
-                i += 1
+        ctx = Context(main)
+        main.parse_args(ctx, env_opts)
+        # Only override CLI values with env values that were explicitly set (not None)
+        if ctx.params.get('num_rows') is not None:
+            num_rows = ctx.params['num_rows']
+        if ctx.params.get('offset') is not None:
+            offset = ctx.params['offset']
+        if ctx.params.get('compact'):
+            compact = ctx.params['compact']
+
+    # Apply defaults for values not set by CLI or env
+    if num_rows is None:
+        num_rows = str(DEFAULT_NUM_ROWS)
+    if offset is None:
+        offset = DEFAULT_OFFSET
 
     # Parse num_rows
     if num_rows == ',':

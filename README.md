@@ -403,17 +403,20 @@ index 0000000..3a84f68
 <!-- `bmdf -- parquet2json-all -h` -->
 ```bash
 parquet2json-all -h
-# Usage: parquet2json-all [-n <head_rows=10>] [-o <offset_args>] [-s] <path>
-#   -n: number of first and last rows to display; comma-separate to distinguish head/tail (e.g. default `-n3` is equivalent to `-n3,3`, which displays 3 rows from start and end). `,` prints all rows (useful in conjunction with an `-o` offset).
-#   -o: skip this number of rows; negative ⇒ skip to last N rows
-#   -s: compact mode (one object per line)
+# Usage: parquet2json-all [OPTIONS] [PATH]
 #
-# Opts passed via $PQT_TXT_OPTS will override those passed via CLI (to allow for configuring `git show`):
+#   Display parquet file metadata and sample rows
 #
-# The "opts var" itself ("PQT_TXT_OPTS" by default) can also be customized, by setting `$PQT_TXT_OPTS_VAR`, e.g.:
-#
-#   export PQT_TXT_OPTS_VAR=PQT  # This can be done once, e.g. in your .bashrc
-#   PQT="-sn3" git show          # Shorter var name can then be used to configure diffs rendered by `git show` (in this case: compact output, 3 rows)
+# Options:
+#   -n, --num-rows TEXT   Number of first and last rows to display (default: 3);
+#                         comma-separate to distinguish head/tail (e.g. `-n3` is
+#                         equivalent to `-n3,3`). `,` prints all rows. Env var
+#                         $PQT_TXT_OPTS (or ${PQT_TXT_OPTS_VAR}) overrides CLI
+#                         options.
+#   -o, --offset INTEGER  Skip this number of rows (default: 0); negative ⇒ skip
+#                         to last N rows
+#   -s, --compact         Compact mode (one object per line)
+#   -h, --help            Show this message and exit.
 ```
 
 #### Appending rows <a id="appending-rows"></a>
@@ -433,7 +436,9 @@ test.parquet (5ca9743..c621f0e)
 > MD5: 762aeca641059e0773382adab8d23fa5
 > 13786 bytes
 > 25 rows
-21a22,26
+22c22,26
+< 
+---
 > {"Ride ID":"A708CB5F5B9B0A0A","Rideable Type":"classic_bike","Start Time":"2024-10-31T18:24:32.978","Stop Time":"2024-11-01T01:00:53.858","Start Station Name":"4 Ave & E 12 St","Start Station ID":"5788.15","End Station Name":"8 Ave & W 31 St","End Station ID":"6450.05","Start Station Latitude":40.732647,"Start Station Longitude":-73.99011,"End Station Latitude":40.7505853470215,"End Station Longitude":-73.9946848154068,"Gender":"U","User Type":"Customer","Start Region":"NYC","End Region":"NYC"}
 > {"Ride ID":"AF7B0AA23EA2BEEA","Rideable Type":"electric_bike","Start Time":"2024-10-31T18:30:18.577","Stop Time":"2024-11-01T00:19:32.156","Start Station Name":"Columbus Ave & W 95 St","Start Station ID":"7520.07","End Station Name":"Freeman St & Reverend James A Polite Ave","End Station ID":"8080.01","Start Station Latitude":40.7919557,"Start Station Longitude":-73.968087,"End Station Latitude":40.830529,"End Station Longitude":-73.894717,"Gender":"U","User Type":"Customer","Start Region":"NYC","End Region":"NYC"}
 > {"Ride ID":"7D719878E8164589","Rideable Type":"electric_bike","Start Time":"2024-10-31T18:30:29.155","Stop Time":"2024-11-01T00:19:43.550","Start Station Name":"Columbus Ave & W 95 St","Start Station ID":"7520.07","End Station Name":"Freeman St & Reverend James A Polite Ave","End Station ID":"8080.01","Start Station Latitude":40.7919557,"Start Station Longitude":-73.968087,"End Station Latitude":40.830529,"End Station Longitude":-73.894717,"Gender":"U","User Type":"Customer","Start Region":"NYC","End Region":"NYC"}
@@ -469,10 +474,11 @@ index 5ca9743..c621f0e 100644
  message schema {
    OPTIONAL BYTE_ARRAY Ride ID (STRING);
    OPTIONAL BYTE_ARRAY Rideable Type (STRING);
-@@ -19,3 +19,8 @@ message schema {
+@@ -19,4 +19,8 @@ message schema {
    OPTIONAL BYTE_ARRAY Start Region (STRING);
    OPTIONAL BYTE_ARRAY End Region (STRING);
  }
+-
 +{"Ride ID":"A708CB5F5B9B0A0A","Rideable Type":"classic_bike","Start Time":"2024-10-31T18:24:32.978","Stop Time":"2024-11-01T01:00:53.858","Start Station Name":"4 Ave & E 12 St","Start Station ID":"5788.15","End Station Name":"8 Ave & W 31 St","End Station ID":"6450.05","Start Station Latitude":40.732647,"Start Station Longitude":-73.99011,"End Station Latitude":40.7505853470215,"End Station Longitude":-73.9946848154068,"Gender":"U","User Type":"Customer","Start Region":"NYC","End Region":"NYC"}
 +{"Ride ID":"AF7B0AA23EA2BEEA","Rideable Type":"electric_bike","Start Time":"2024-10-31T18:30:18.577","Stop Time":"2024-11-01T00:19:32.156","Start Station Name":"Columbus Ave & W 95 St","Start Station ID":"7520.07","End Station Name":"Freeman St & Reverend James A Polite Ave","End Station ID":"8080.01","Start Station Latitude":40.7919557,"Start Station Longitude":-73.968087,"End Station Latitude":40.830529,"End Station Longitude":-73.894717,"Gender":"U","User Type":"Customer","Start Region":"NYC","End Region":"NYC"}
 +{"Ride ID":"7D719878E8164589","Rideable Type":"electric_bike","Start Time":"2024-10-31T18:30:29.155","Stop Time":"2024-11-01T00:19:43.550","Start Station Name":"Columbus Ave & W 95 St","Start Station ID":"7520.07","End Station Name":"Freeman St & Reverend James A Polite Ave","End Station ID":"8080.01","Start Station Latitude":40.7919557,"Start Station Longitude":-73.968087,"End Station Latitude":40.830529,"End Station Longitude":-73.894717,"Gender":"U","User Type":"Customer","Start Region":"NYC","End Region":"NYC"}
@@ -798,7 +804,7 @@ The number of rows evidently stayed the same, but the schema and first 2 preview
 ### Comparing sorted schemas <a id="sorted-schemas"></a>
 `git-diff-x -R <commit> pqs sort` is useful for inspecting schema changes: it renders the "before" and "after" schemas as text, and sorts them:
 
-<!-- `bmdff -stdiff git dxr 9a9370c pqs sort test.parquet` -->
+<!-- `bmdff -r1 -stdiff git dxr 9a9370c pqs sort test.parquet` -->
 ```bash
 git dxr 9a9370c pqs sort test.parquet
 ```
@@ -816,7 +822,7 @@ This immediately makes clear that:
 ### Comparing rows sorted by primary key <a id="sorted-primary-keys"></a>
 The rows above have an (apparently unique) "Ride ID" column; we can use that to check whether rows were added/deleted or just rearranged:
 
-<!-- `bmdf -stdiff git dxr 9a9370c pqc 'jq ".\"Ride ID\""' sort test.parquet` -->
+<!-- `bmdf -r0 -stdiff git dxr 9a9370c pqc 'jq ".\"Ride ID\""' sort test.parquet` -->
 ```bash
 git dxr 9a9370c pqc 'jq ".\"Ride ID\""' sort test.parquet
 ```
@@ -845,7 +851,7 @@ implies that [`9a9370c`] sorted rows by "Ride ID". Let's check that…
 ### Comparing sorted rows and columns <a id="sorted-rows-cols"></a>
 Diffing again, but sorting the rows by "Ride ID", and only comparing the first row:
 
-<!-- `bmdfff -stdiff git dxr 9a9370c pqc 'jq -s "sort_by(.[\"Ride ID\"])[0]"' test.parquet` -->
+<!-- `bmdfff -r1 -stdiff git dxr 9a9370c pqc 'jq -s "sort_by(.[\"Ride ID\"])[0]"' test.parquet` -->
 <details><summary><code>git dxr 9a9370c pqc 'jq -s "sort_by(.[\"Ride ID\"])[0]"' test.parquet</code></summary>
 
 ```diff
@@ -881,7 +887,7 @@ Diffing again, but sorting the rows by "Ride ID", and only comparing the first r
 
 It seems to be the same object, but with the keys reordered. Here we check by sorting the keys within the first row (after sorting by "Ride ID"), examining just the first 5 rows:
 
-<!-- `bmdf -stdiff git dxr 9a9370c pqc 'jq -s "sort_by(.[\"Ride ID\"])[:5][] | to_entries | sort_by(.key) | from_entries"' test.parquet` -->
+<!-- `bmdf -r1 -stdiff git dxr 9a9370c pqc 'jq -s "sort_by(.[\"Ride ID\"])[:5][] | to_entries | sort_by(.key) | from_entries"' test.parquet` -->
 ```bash
 git dxr 9a9370c pqc 'jq -s "sort_by(.[\"Ride ID\"])[:5][] | to_entries | sort_by(.key) | from_entries"' test.parquet
 # 7d6

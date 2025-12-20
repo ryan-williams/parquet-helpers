@@ -5,10 +5,13 @@ ENV PATH=/root/.cargo/bin:$PATH
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
  && cargo install parquet2json
 
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH=/root/.local/bin:$PATH
+
 ENV VIRTUAL_ENV=.venv
 ENV PATH=/$VIRTUAL_ENV/bin:$PATH
 RUN python3 -m venv $VIRTUAL_ENV \
- && pip3 install 'bmdf>=0.4.0' 'dffs>=0.0.5'
+ && pip3 install 'mdcmd>=0.7.4' 'dffs>=0.1.1'
 
 SHELL ["/bin/bash", "-c"]
 
