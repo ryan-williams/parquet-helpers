@@ -24,7 +24,7 @@ class DateTimeEncoder(JSONEncoder):
         return super().default(obj)
 
 
-@command
+@command(context_settings=dict(help_option_names=['-h', '--help']))
 @argument('path', required=False)
 def main(path: str | None):
     """Print the metadata of a Parquet file."""

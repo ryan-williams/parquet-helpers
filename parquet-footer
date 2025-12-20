@@ -24,7 +24,7 @@ from click import argument, command, option
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 
-@command
+@command(context_settings=dict(help_option_names=['-h', '--help']))
 @option('-l', '--length', is_flag=True, help='Print footer length only')
 @argument('path', required=False)
 def main(path: str | None, length: bool):
