@@ -58,6 +58,10 @@ cat foo.parquet | pqc  # 🎉 even easier
   - First 10 rows
     - Configurable via `-n <n>`
     - `-c`: "compact" one row per line (by default, rows are piped through `jq`, which pretty-prints them, one field per line)
+- `pqhn <n>`: print first `n` rows (supports scientific notation, e.g. `pqhn e6` for 1M rows)
+- `pqtl [n]`: print last `n` rows (default: 10; supports scientific notation)
+- `pqsl <offset>[+<limit>]`: slice rows by offset and limit (e.g. `pqsl 10+5` for 5 rows starting at offset 10; supports scientific notation like `pqsl e6+e3`)
+- `pqf` ([`parquet-footer`]): extract raw Parquet footer bytes (Thrift-serialized FileMetaData)
 
 ### Examples <a id="alias-examples"></a>
 Inspecting [`test.parquet@63dcdba`]:
@@ -911,6 +915,7 @@ It's a contrived example, but based on real comparisons I did on Parquet files i
 
 [`parquet-2-json.sh`]: ./parquet-2-json.sh
 [`parquet2json-all`]: parquet2json-all
+[`parquet-footer`]: ./parquet-footer
 [git-diff-parquet.sh]: ./git-diff-parquet.sh
 [`.pqt-rc`]: ./.pqt-rc
 [`parquet2json`]: https://github.com/jupiter/parquet2json/
