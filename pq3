@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+parquet-2-json.sh cat -l 3 "$@"

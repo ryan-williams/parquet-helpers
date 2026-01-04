@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+parquet2json_head_pretty 10 "$@"
