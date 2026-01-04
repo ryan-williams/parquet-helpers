@@ -9,7 +9,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from os import environ
 from os.path import exists
-from subprocess import PIPE, run
+from subprocess import CalledProcessError, PIPE, run
 from sys import exit
 from utz import err
 from utz.cli import arg, cmd, flag, opt
@@ -17,8 +17,17 @@ from utz.proc import text
 
 
 def parquet2json(*args):
-    """Run parquet-2-json.sh and return stdout"""
-    return text('parquet-2-json.sh', *map(str, args), log=None).rstrip()
+    """Run parquet-2-json.sh and return stdout. Raises CalledProcessError on failure."""
+    result = run(
+        ['parquet-2-json.sh', *map(str, args)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        # Combine stdout and stderr for error context
+        output = (result.stdout + result.stderr).strip()
+        raise CalledProcessError(result.returncode, result.args, output=output)
+    return result.stdout.rstrip()
 
 
 def get_file_info(path):
@@ -110,9 +119,35 @@ def main(num_rows, offset, compact, path):
         schema_future = executor.submit(parquet2json, 'schema', path)
         file_info_future = executor.submit(get_file_info, path)
 
-        rowcount = int(rowcount_future.result())
-        schema = schema_future.result()
-        md5, size = file_info_future.result()
+        try:
+            rowcount = int(rowcount_future.result())
+            schema = schema_future.result()
+            md5, size = file_info_future.result()
+        except CalledProcessError as e:
+            # Extract a cleaner error message from parquet2json output
+            output = e.output or ''
+            if 'NotFound' in output or 'status: 404' in output:
+                err(f"File not found: {path}")
+            elif 'status: 403' in output:
+                err(f"Access denied: {path}")
+            elif 'ExpiredToken' in output or 'credentials' in output.lower():
+                err(f"AWS credentials error: {path}")
+            elif 'Invalid Parquet file' in output or 'magic' in output.lower():
+                err(f"Invalid Parquet file: {path}")
+            else:
+                # Find the most useful error line (skip panic location, stack traces)
+                for line in output.splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    # Skip rust panic header and stack trace lines
+                    if line.startswith(("thread '", 'stack backtrace', 'note:', '   ', '  ')):
+                        continue
+                    err(line)
+                    break
+                else:
+                    err(f"Error reading: {path}")
+            exit(e.returncode)
 
     print(f"MD5: {md5}")
     print(f"{size} bytes")
