@@ -8,3 +8,4 @@
 !parquet-metadata.py
 !parquet-footer
 !parquet2json-all
+!pqd

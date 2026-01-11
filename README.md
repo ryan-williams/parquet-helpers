@@ -58,9 +58,17 @@ cat foo.parquet | pqc  # 🎉 even easier
   - First 10 rows
     - Configurable via `-n <n>`
     - `-c`: "compact" one row per line (by default, rows are piped through `jq`, which pretty-prints them, one field per line)
+- `pqh`: print first 10 rows
+- `pq1`, `pq2`, `pq3`, `pq5`, `pq10`: print first 1/2/3/5/10 rows
 - `pqhn <n>`: print first `n` rows (supports scientific notation, e.g. `pqhn e6` for 1M rows)
 - `pqtl [n]`: print last `n` rows (default: 10; supports scientific notation)
 - `pqsl <offset>[+<limit>]`: slice rows by offset and limit (e.g. `pqsl 10+5` for 5 rows starting at offset 10; supports scientific notation like `pqsl e6+e3`)
+- `pqo <offset>`: print rows starting at offset (passed to `parquet2json cat -o`)
+- `pqk <col>`: extract values from a single column
+- `pqd <col1,col2,...>`: drop columns from output
+- `pqq <jq-filter>`: apply jq filter to rows
+- `pqt`: sort rows
+- `pqm` ([`parquet-metadata.py`]): PyArrow metadata (row groups, column chunks, encodings)
 - `pqf` ([`parquet-footer`]): extract raw Parquet footer bytes (Thrift-serialized FileMetaData)
 
 ### Examples <a id="alias-examples"></a>
@@ -916,6 +924,7 @@ It's a contrived example, but based on real comparisons I did on Parquet files i
 [`parquet-2-json.sh`]: ./parquet-2-json.sh
 [`parquet2json-all`]: parquet2json-all
 [`parquet-footer`]: ./parquet-footer
+[`parquet-metadata.py`]: ./parquet-metadata.py
 [git-diff-parquet.sh]: ./git-diff-parquet.sh
 [`.pqt-rc`]: ./.pqt-rc
 [`parquet2json`]: https://github.com/jupiter/parquet2json/
