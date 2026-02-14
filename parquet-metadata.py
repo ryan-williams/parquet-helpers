@@ -5,7 +5,7 @@
 # ///
 import json
 import signal
-from datetime import datetime
+from datetime import date, datetime
 from io import BytesIO
 from json import JSONEncoder
 from sys import stdin, stdout
@@ -19,7 +19,7 @@ signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 class DateTimeEncoder(JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, datetime):
+        if isinstance(obj, (date, datetime)):
             return obj.isoformat()
         return super().default(obj)
 
