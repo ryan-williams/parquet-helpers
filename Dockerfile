@@ -19,7 +19,6 @@ ENV PATH=/src:$PATH
 WORKDIR /src
 
 COPY . .
-RUN echo "*.parquet diff=parquet" > .gitattributes
 RUN git config diff.parquet.command git-diff-parquet.sh
 RUN git config diff.parquet.textconv "parquet2json-all -n2"
 RUN git config diff.noprefix true
